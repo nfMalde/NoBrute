@@ -2,6 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/nfMalde/NoBrute</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/nfMalde/NoBrute</RepositoryUrl>
+    <RepositoryType>GIT</RepositoryType>
+    <PackageTags>BruteForce Protection, .NET CORE, Anti Bruteforce, Brute Force, Security</PackageTags>
+    <Authors>Malte</Authors>
+    <Description>Simple and light bruteforce protection for .NET CORE 3.1+
+This Lib will protect defined actions in your controllers in making them inefficient to be bruteforced for simple soulutions.
+It will append request times in ms if a local cache entry on the server was found for the same request &amp; request name &amp; method and the hit count reaches an defined limit (so called here: greenrequests) in an amount of time.</Description>
+    <Copyright>2021 Malte</Copyright>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +26,13 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.10" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.10" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
