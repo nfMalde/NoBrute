@@ -80,7 +80,7 @@ string requestName | Gives an fixed name to the incoming request to better ident
 bool autoProcess  | Indicated that the requests should be released / cleared when the configurated (See above) HTPPStatusCode is returned by the action. (Default: false)
 
 #### Examples
-* Generated Name *
+**Generated Name**
 ```C#
 [NoBrute]
 public IHttpActionResult Login() {
@@ -88,7 +88,7 @@ public IHttpActionResult Login() {
 }
 ```
 
-* Generated Name with auto release*
+***Generated Name with auto release**
 ```C#
 [NoBrute(true)]
 public IHttpActionResult Login() {
@@ -96,8 +96,7 @@ public IHttpActionResult Login() {
 }
 ```
 
-
-* Fixed Name *
+**Fixed Name**
 ```C#
 [NoBrute("MyFixedName")]
 public IHttpActionResult Login() {
@@ -105,7 +104,7 @@ public IHttpActionResult Login() {
 }
 ```
 
-* Fixed Name  with auto release*
+**Fixed Name  with auto release**
 ```C#
 [NoBrute("MyFixedName", true)]
 public IHttpActionResult Login() {
@@ -117,7 +116,7 @@ public IHttpActionResult Login() {
 ### The Service
 If you have a more complex design to decide when a request should be checked or not you can also use the Service.
 
-* Inject Service *
+**Inject Service**
 ```C#
 private readonly INoBrute nobrute;
 
@@ -126,7 +125,7 @@ public MyController(INoBrute nobrute) {
 }
 ```
 
-Use it in the method:
+**Use it in the method:**
 
 ```C#
 public IHttpActionResult MyAction() {
