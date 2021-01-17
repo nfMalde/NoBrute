@@ -1,5 +1,5 @@
 # NoBrute (by Malte)
-[![Nuget](https://img.shields.io/nuget/v/NoBrute?style=for-the-badge)](https://www.nuget.org/packages/NoBrute/) [![Downloads](https://img.shields.io/nuget/dt/NoBrute?style=for-the-badge)](https://www.nuget.org/packages/Autofac.NoBrute/)
+[![Nuget](https://img.shields.io/nuget/v/NoBrute?style=for-the-badge)](https://www.nuget.org/packages/NoBrute/) [![Downloads](https://img.shields.io/nuget/dt/NoBrute?style=for-the-badge)](https://www.nuget.org/packages/NoBrute/)
 
 Simple and light bruteforce protection for .NET CORE 3.1+
 This Lib will protect defined actions in your controllers in making them inefficient to be bruteforced for simple soulutions.
