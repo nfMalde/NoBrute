@@ -1,15 +1,9 @@
-using NUnit.Framework;
-using NoBrute.Models;
-using NoBrute.Domain;
-using Moq;
-using System;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
+using NoBrute.Domain;
+using NoBrute.Models;
+using NUnit.Framework;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.AspNetCore.Http;
 
 namespace NoBruteTesting
 {
@@ -17,9 +11,8 @@ namespace NoBruteTesting
     /// Tests for the NoBruteService.
     /// </summary>
     /// <seealso cref="NoBruteTesting.Abstracts.NoBruteTestCasesAbstract" />
-    public class NoBruteServiceTests: Abstracts.NoBruteTestCasesAbstract
+    public class NoBruteServiceTests : Abstracts.NoBruteTestCasesAbstract
     {
-
         #region Global Test Cases
 
         /// <summary>
@@ -34,20 +27,20 @@ namespace NoBruteTesting
                 this.MockConfig(true, 5, 10, 2);
                 this.MockRequest();
 
-
                 INoBrute noBrute = new NoBrute.Data.NoBrute(this.provider.BuildServiceProvider());
             });
         }
 
-        #endregion
+        #endregion Global Test Cases
 
         #region Mixed Cache Test Cases
+
         /// <summary>
         /// It should handle request release for correct status code.
         /// </summary>
         /// <param name="statusCodeForAutoRelease">The status code for automatic release.</param>
         /// <param name="expectedStatusCode">The expected status code.</param>
-        [TestCase(200,200)]
+        [TestCase(200, 200)]
         [TestCase(200, 401)]
         [TestCase(200, 500)]
         [TestCase(200, 404)]
@@ -62,10 +55,8 @@ namespace NoBruteTesting
                 "Distributed"
             };
 
-
             foreach (string cacheType in cacheTypes)
             {
-
                 string requestName = "FALSY_REQUEST";
                 NoBruteEntry entry = new NoBruteEntry();
                 entry.IP = "127.0.0.1";
@@ -93,7 +84,6 @@ namespace NoBruteTesting
 
                 noBrute.AutoProcessRequestRelease(expectedStatusCode, requestName);
 
-
                 if (statusCodeForAutoRelease == expectedStatusCode)
                 {
                     // In this case we expect that the requests got released
@@ -105,12 +95,12 @@ namespace NoBruteTesting
                     Assert.AreEqual(requestsBefore, entry.Requests.Count, $"Request unexpected removed at cache type:{cacheType}");
                 }
             }
-
         }
 
         #endregion Mixed Cache Test Cases
 
         #region Memory Cache Test Cases
+
         /// <summary>
         /// It should not increase request time if green request with memory cache.
         /// </summary>
@@ -122,12 +112,11 @@ namespace NoBruteTesting
             entry.IP = "127.0.0.1";
             entry.Requests = new List<NoBruteRequestItem>();
 
-            // Init Mocks 
+            // Init Mocks
             this.RegisterDeadMocks();
             this.MockConfig(true, 5, 10, 2);
             this.RegisterMockMemoryCache(entry);
             this.MockRequest();
-
 
             INoBrute noBrute = new NoBrute.Data.NoBrute(this.provider.BuildServiceProvider());
 
@@ -135,7 +124,6 @@ namespace NoBruteTesting
 
             Assert.AreEqual(0, rCheck.AppendRequestTime);
             Assert.IsTrue(rCheck.IsGreenRequest);
-            
         }
 
         /// <summary>
@@ -161,9 +149,9 @@ namespace NoBruteTesting
                 RequestQuery = ""
             });
 
-            // Init Mocks 
+            // Init Mocks
             this.RegisterDeadMocks();
-            this.MockConfig(true,greenRetries: 5, increaseTime: 10, 2);
+            this.MockConfig(true, greenRetries: 5, increaseTime: 10, 2);
             this.RegisterMockMemoryCache(entry);
             this.MockRequest();
 
@@ -174,14 +162,12 @@ namespace NoBruteTesting
             Assert.NotNull(rCheck);
             Assert.False(rCheck.IsGreenRequest);
             Assert.AreEqual(10, rCheck.AppendRequestTime);
-
         }
 
-
-
-        #endregion
+        #endregion Memory Cache Test Cases
 
         #region Distributed Cache Test Cases
+
         /// <summary>
         /// It should not increase request time if green request with distributed cache.
         /// </summary>
@@ -193,12 +179,11 @@ namespace NoBruteTesting
             entry.IP = "127.0.0.1";
             entry.Requests = new List<NoBruteRequestItem>();
 
-            // Init Mocks 
+            // Init Mocks
             this.RegisterDeadMocks();
             this.MockConfig(true, 5, 10, 2);
             this.RegisterMockDistributedCache(entry);
             this.MockRequest();
-
 
             INoBrute noBrute = new NoBrute.Data.NoBrute(this.provider.BuildServiceProvider());
 
@@ -231,7 +216,7 @@ namespace NoBruteTesting
                 RequestQuery = ""
             });
 
-            // Init Mocks 
+            // Init Mocks
             this.RegisterDeadMocks();
             this.MockConfig(true, greenRetries: 5, increaseTime: 10, 2);
             this.RegisterMockDistributedCache(entry);
@@ -244,11 +229,8 @@ namespace NoBruteTesting
             Assert.NotNull(rCheck);
             Assert.False(rCheck.IsGreenRequest);
             Assert.AreEqual(10, rCheck.AppendRequestTime);
-
         }
 
         #endregion Distributed Cache Test Cases
-
-
     }
 }

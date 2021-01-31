@@ -6,12 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NoBrute.Models;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
 
 namespace NoBruteTesting.Abstracts
 {
@@ -19,9 +17,10 @@ namespace NoBruteTesting.Abstracts
     /// Helper Methods / Abstracts / Fields for NoBruteService Test Cases
     /// </summary>
     /// <seealso cref="NoBruteTesting.Abstracts.Base.TestCaseAbstractBase" />
-    public abstract class NoBruteTestCasesAbstract:Base.TestCaseAbstractBase
+    public abstract class NoBruteTestCasesAbstract : Base.TestCaseAbstractBase
     {
         #region Fields
+
         /// <summary>
         /// Cache method delegate to used in mock objects as callback
         /// </summary>
@@ -32,6 +31,7 @@ namespace NoBruteTesting.Abstracts
         #endregion Fields
 
         #region Helper Methods
+
         /// <summary>
         /// Mocks the request.
         /// </summary>
@@ -49,7 +49,6 @@ namespace NoBruteTesting.Abstracts
             contextMock.Setup(x => x.HttpContext).Returns(context);
 
             this.provider.AddScoped<IHttpContextAccessor>(x => contextMock.Object);
-
         }
 
         /// <summary>
@@ -73,9 +72,7 @@ namespace NoBruteTesting.Abstracts
             cacheMock.Setup(x => x.CreateEntry(It.IsAny<string>())).Returns(mockCacheEntry.Object);
 
             this.provider.AddScoped<IMemoryCache>(x => cacheMock.Object);
-
         }
-
 
         /// <summary>
         /// Registers the mock distributed cache.
@@ -89,9 +86,9 @@ namespace NoBruteTesting.Abstracts
             using (MemoryStream ms = new MemoryStream())
             {
                 bf.Serialize(ms, desiredReturnEntry);
-                var ar =  ms.ToArray();
+                var ar = ms.ToArray();
                 mock.Setup(x => x.Get(It.IsAny<string>())).Returns(ar);
-            } 
+            }
             mock.Setup(x => x.Set(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>()));
 
             this.provider.AddScoped<IDistributedCache>((f) => mock.Object);
@@ -138,7 +135,6 @@ namespace NoBruteTesting.Abstracts
                 mockCode.Setup(x => x.Value).Returns(statusCodes[i].ToString());
 
                 sections.Add(mockCode.Object);
-
             }
 
             IEnumerable<KeyValuePair<string, string>> pairs = statusCodes.Select(code => code.ToString()).Select(s => new KeyValuePair<string, string>(s, s));
@@ -169,6 +165,7 @@ namespace NoBruteTesting.Abstracts
 
             return section.Object;
         }
+
         #endregion Helper Methods
     }
 }

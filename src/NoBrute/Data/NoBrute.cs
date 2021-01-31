@@ -26,30 +26,37 @@ namespace NoBrute.Data
         /// The enabled
         /// </summary>
         private bool? enabled;
+
         /// <summary>
         /// The green retries
         /// </summary>
         private int? greenRetries;
+
         /// <summary>
         /// The increase request time ms
         /// </summary>
         private int? increaseRequestTimeMs;
+
         /// <summary>
         /// The time until reset
         /// </summary>
         private int? timeUntilReset;
+
         /// <summary>
         /// The time until reset unit
         /// </summary>
         private Models.TimeUntilResetUnit? timeUntilResetUnit;
+
         /// <summary>
         /// The logger
         /// </summary>
         private readonly ILogger<NoBrute> logger;
+
         /// <summary>
         /// The HTTP context accessor
         /// </summary>
         private readonly IHttpContextAccessor httpContextAccessor;
+
         /// <summary>
         /// The cache
         /// </summary>
@@ -68,7 +75,7 @@ namespace NoBrute.Data
         /// <summary>
         /// Initializes a new instance of the <see cref="NoBrute"/> class.
         /// </summary>
-        /// <param name="provider">The provider.</param> 
+        /// <param name="provider">The provider.</param>
         /// <exception cref="NoBruteDependencyException">
         /// NoBrute requires MemoryCahce to be used. Install the Package: Microsoft.Extensions.Caching.Abstractions and use it in your ConfigureServices method with 'services.AddMemoryCache();'
         /// or
@@ -76,8 +83,7 @@ namespace NoBrute.Data
         /// </exception>
         public NoBrute(IServiceProvider provider)
         {
-
-            this.logger = provider.GetService< ILogger<NoBrute>>();
+            this.logger = provider.GetService<ILogger<NoBrute>>();
             this.httpContextAccessor = provider.GetService<IHttpContextAccessor>();
             // Get Services required for running
             IMemoryCache memoryCache = provider.GetService<IMemoryCache>();
@@ -98,7 +104,7 @@ namespace NoBrute.Data
             this.distributed = distributedCache;
 
             this.logger.LogDebug("Memory Cache is registered. Getting Config.");
-                
+
             if (config == null)
             {
                 this.logger.LogError("Something went wrong with the IConfiguration Service.");
@@ -115,7 +121,7 @@ namespace NoBrute.Data
             this.timeUntilResetUnit = this.GetUnit(section?.GetValue<char>("TimeUntilResetUnit", 'H'));
             IConfigurationSection statusCodes = section.GetSection("StatusCodesForAutoProcess");
             this.statusCodesForAutoProcess = statusCodes.AsEnumerable().Select(x => Convert.ToInt32(x.Value))?.ToArray() ?? new int[] { 200 };
-            
+
             if (this.statusCodesForAutoProcess.Length == 0)
             {
                 this.statusCodesForAutoProcess = new int[] { 200 };
@@ -135,8 +141,6 @@ namespace NoBrute.Data
         /// <returns></returns>
         public NoBruteRequestCheck CheckRequest(string requestName = null)
         {
-
-            
             using (this.logger.BeginScope("CheckRequest"))
             {
                 if (!this.enabled.Value)
@@ -153,8 +157,6 @@ namespace NoBrute.Data
                 if (ip.Contains('.'))
                 {
                     ip_censored = this.censoreIp(ip, '.');
-
-
                 }
                 else
                 {
@@ -173,7 +175,6 @@ namespace NoBrute.Data
 
                 this.clearExpiredItems(noBruteEntry);
                 NoBruteRequestItem requestItem = this.manageRequestEntry(noBruteEntry, name, request);
-
 
                 this._SetCacheItem(cacheKey, noBruteEntry);
                 this.logger.LogDebug("Added Cache Entry");
@@ -196,9 +197,7 @@ namespace NoBrute.Data
                 }
 
                 return result;
-
             }
-
         }
 
         /// <summary>
@@ -217,16 +216,13 @@ namespace NoBrute.Data
             if (ip.Contains('.'))
             {
                 ip_censored = this.censoreIp(ip, '.');
-
-
             }
             else
             {
                 ip_censored = this.censoreIp(ip, ':');
             }
 
-
-            using(this.logger.BeginScope("ReleaseRequest"))
+            using (this.logger.BeginScope("ReleaseRequest"))
             {
                 this.logger.LogDebug($"Trying to fetch cache entry >{cacheKey}< for IP >{ip_censored}<");
                 NoBruteEntry entry = null;
@@ -239,7 +235,6 @@ namespace NoBrute.Data
 
                     return true;
                 }
-
 
                 this.logger.LogDebug($"Trying to find request with name >{name}<...");
 
@@ -255,7 +250,6 @@ namespace NoBrute.Data
                     this.logger.LogDebug($"Deleted request item >{cacheKey}.{name}<");
                     return true;
                 }
-
             }
 
             return false;
@@ -276,7 +270,6 @@ namespace NoBrute.Data
                 return true;
             }
 
-
             return false;
         }
 
@@ -294,7 +287,7 @@ namespace NoBrute.Data
             byte[] result = this.distributed.Get(cacheKey);
 
             if (result != null)
-            { 
+            {
                 item = this._GetEntryFromByteArray(result);
                 return true;
             }
@@ -313,13 +306,12 @@ namespace NoBrute.Data
         {
             if (this.distributed == null)
             {
-
                 this.cache.Set<NoBruteEntry>(cacheKey, item);
             }
             else
             {
                 this.distributed.Set(cacheKey, this._GetByteArrayFromEntry(item));
-            } 
+            }
         }
 
         /// <summary>
@@ -348,7 +340,7 @@ namespace NoBrute.Data
         private NoBruteEntry _GetEntryFromByteArray(byte[] data)
         {
             if (data == null)
-                return  null;
+                return null;
 
             BinaryFormatter bf = new BinaryFormatter();
             using (MemoryStream ms = new MemoryStream(data))
@@ -367,7 +359,6 @@ namespace NoBrute.Data
         /// <returns></returns>
         private NoBruteRequestItem manageRequestEntry(NoBruteEntry entry, string requestName, HttpRequest data)
         {
-
             if (entry.Requests.Any(x => x.RequestName == requestName && x.RequestMethod == data.Method))
             {
                 NoBruteRequestItem item = entry.Requests.First(x => x.RequestName == requestName && x.RequestMethod == data.Method);
@@ -375,7 +366,6 @@ namespace NoBrute.Data
                 item.LastHit = DateTime.Now;
 
                 return item;
-
             }
             else
             {
@@ -431,15 +421,10 @@ namespace NoBrute.Data
                 case TimeUntilResetUnit.Miliseconds:
                     expireIn = new TimeSpan(0, 0, 0, 0, this.timeUntilReset.Value);
                     break;
-
-
             }
 
-
             entry.Requests = entry.Requests.Where(x => !x.IsExpired(expireIn)).ToList();
-
         }
-
 
         /// <summary>
         /// Gets the expire timespan.
@@ -478,13 +463,10 @@ namespace NoBrute.Data
                 case TimeUntilResetUnit.Miliseconds:
                     expireIn = new TimeSpan(0, 0, 0, 0, this.timeUntilReset.Value);
                     break;
-
-
             }
 
             return expireIn;
         }
-
 
         /// <summary>
         /// Generates the cache key.
@@ -530,7 +512,6 @@ namespace NoBrute.Data
             return null;
         }
 
-
         /// <summary>
         /// Checks the configuration.
         /// </summary>
@@ -540,9 +521,8 @@ namespace NoBrute.Data
             this.checkConfigEntry(section, "Enabled", typeof(bool), this.enabled, true);
             this.checkConfigEntry(section, "GreenRetries", typeof(int), this.greenRetries, 10);
             this.checkConfigEntry(section, "IncreaseRequestTime", typeof(int), this.increaseRequestTimeMs, 20);
-            this.checkConfigEntry(section, "TimeUntilReset", typeof(int), this.timeUntilReset,1);
+            this.checkConfigEntry(section, "TimeUntilReset", typeof(int), this.timeUntilReset, 1);
             this.checkConfigEntry(section, "TimeUntilResetUnit", typeof(char), this.timeUntilResetUnit, 'd');
-
         }
 
         /// <summary>
@@ -565,8 +545,6 @@ namespace NoBrute.Data
             this.logger.LogDebug($"Configuration Item NoBrute->{name} is valid with value {section?.GetValue<string>(name, defaultValue.ToString()) ?? "NULL"}");
         }
 
-
-
         /// <summary>
         /// Censores the ip.
         /// </summary>
@@ -575,7 +553,6 @@ namespace NoBrute.Data
         /// <returns></returns>
         private string censoreIp(string ip, char seperator)
         {
-           
             return string.Join("", ip.ToCharArray().Select(x => '*').Select(x => x.ToString()));
         }
     }

@@ -7,9 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NoBrute.Domain;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace NoBruteTesting.Abstracts
@@ -18,16 +16,16 @@ namespace NoBruteTesting.Abstracts
     /// TestCase Abstract class for NoBruteAttribute Tests
     /// </summary>
     /// <seealso cref="NoBruteTesting.Abstracts.Base.TestCaseAbstractBase" />
-    public abstract class NoBruteAttributeTestCasesAbstract: Base.TestCaseAbstractBase
+    public abstract class NoBruteAttributeTestCasesAbstract : Base.TestCaseAbstractBase
     {
-
         /// <summary>
         /// Gets the action execution delegate.
         /// </summary>
         /// <returns></returns>
         protected ActionExecutionDelegate GetActionExecutionDelegate()
         {
-            ActionExecutionDelegate next = () => {
+            ActionExecutionDelegate next = () =>
+            {
                 var ctx = new ActionExecutedContext(this.GetActionContextMock(), new List<IFilterMetadata>(), Mock.Of<ControllerBase>());
                 return Task.FromResult(ctx);
             };
@@ -53,7 +51,6 @@ namespace NoBruteTesting.Abstracts
 
             mock.Setup(x => x.CheckRequest(It.IsAny<string>())).Returns(check);
 
-
             this.provider.AddScoped<INoBrute>(f => mock.Object);
 
             return mock;
@@ -73,7 +70,6 @@ namespace NoBruteTesting.Abstracts
                                 Mock.Of<ActionDescriptor>(),
                                 modelState ?? new ModelStateDictionary()
                             );
-
 
             return actionContext;
         }

@@ -10,12 +10,14 @@ namespace NoBrute.Domain
         /// <param name="requestName">Name of the request.</param>
         /// <returns></returns>
         NoBruteRequestCheck CheckRequest(string requestName = null);
+
         /// <summary>
         /// Releases the request.
         /// </summary>
         /// <param name="requestName">Name of the request.</param>
         /// <returns></returns>
         bool ReleaseRequest(string requestName = null);
+
         /// <summary>
         /// Automatics the process request release.
         /// </summary>
