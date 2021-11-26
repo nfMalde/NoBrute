@@ -1,6 +1,8 @@
 [![Nuget](https://img.shields.io/nuget/v/NoBrute?style=flat-square)](https://www.nuget.org/packages/NoBrute/) 
  [![Downloads](https://img.shields.io/nuget/dt/NoBrute?style=flat-square)](https://www.nuget.org/packages/NoBrute/)
- [![Paypal Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL)
+ [![Paypal Donate](https://img.shields.io/badge/DONATE%E2%99%A5-PAYPAL-blue?style=flat-square&logo=paypal)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL)
+ [![Github](https://img.shields.io/badge/nfMalde-NoBrute-lightgrey?style=flat-square&logo=github)](https://github.com/nfMalde/NoBrute)
+
 
 # NoBrute (by Malte)
 Simple and light bruteforce protection for .NET CORE 3.1+
@@ -27,7 +29,7 @@ Enable it in your application:
 
  public IServiceProvider ConfigureServices(IServiceCollection services) {
      
-     // Use Memory Cache:
+     // Use Memoory Cache:
     services.AddMemoryCache();
     // Or an distributed cache (NoBrute will prefer this if both registered)
      services.AddStackExchangeRedisCache(x =>
@@ -145,18 +147,16 @@ The "CheckRequest" Method will return an Object of type NoBruteRequestCheck.
 It will contain the flag "IsGreenRequest" and how much time to append to the request.
 Also some user infos like IP will be returned.
 
-However you have to call the Thread. Sleep by yourself here. The Service will only release and check requests for you but never sleep the requests like the action attribute.
+However you have to call the Thread.Sleep by yourself here. The Service will only release and check requests for you but never sleep the requests like the action attribute.
 
 See more at `/src/Domain/INoBrute.cs` and `/src/Models/NoBruteRequestCheck.cs` in the Github Repository.
-
 
 ## Contribute / Donations
 If you got any Ideas to improve my projects feel free to send an pull request. 
 
 If you like my work and want to support me (or want to buy me a coffee/beer) paypal donation are more than appreciated.
 
- [![Paypal Donate](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL)
-
+ [![Paypal Donate](https://img.shields.io/badge/DONATE%E2%99%A5-PAYPAL-blue?style=for-the-badge&logo=paypal)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL)
 
 
 ## Changelog

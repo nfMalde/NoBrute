@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace NoBrute.Models
 {
@@ -21,13 +19,11 @@ namespace NoBrute.Models
 
         public bool IsExpired(TimeSpan timeToExpire)
         {
-
             DateTime now = DateTime.Now;
 
             TimeSpan diff = now - this.LastHit;
 
             return (diff >= timeToExpire);
-            
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace NoBrute.Models
 {
@@ -8,8 +7,7 @@ namespace NoBrute.Models
     public class NoBruteEntry
     {
         public string IP { get; set; }
-        
-        public List<NoBruteRequestItem> Requests { get; set; }
 
+        public List<NoBruteRequestItem> Requests { get; set; }
     }
 }

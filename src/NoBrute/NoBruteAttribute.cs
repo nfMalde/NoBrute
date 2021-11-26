@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using NoBrute.Domain;
 using NoBrute.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
+
 namespace NoBrute
 {
     /// <summary>
@@ -23,7 +21,7 @@ namespace NoBrute
         /// The automatic process flag. If true, request delay will be cleared automatically for set status coces (Configurable)
         /// </summary>
         /// <remarks>
-        /// Configurable via NoBrute->StatusCodesForAutoProcess  
+        /// Configurable via NoBrute->StatusCodesForAutoProcess
         /// </remarks>
         private bool autoProcess = true;
 
@@ -51,10 +49,10 @@ namespace NoBrute
         /// </summary>
         public NoBruteAttribute()
         {
-
         }
 
         #region Before Request
+
         /// <summary>
         /// </summary>
         /// <param name="context"></param>
@@ -69,7 +67,6 @@ namespace NoBrute
             {
                 System.Threading.Thread.Sleep(check.AppendRequestTime);
             }
-
         }
 
         /// <summary>
@@ -96,7 +93,7 @@ namespace NoBrute
             }
         }
 
-        #endregion BeforRequest
+        #endregion Before Request
 
         #region AfterRequest
 
@@ -108,12 +105,8 @@ namespace NoBrute
 
                 service.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, this.requestName);
             }
-
         }
 
-
-
-        #endregion BeforeRequest
-
+        #endregion AfterRequest
     }
 }

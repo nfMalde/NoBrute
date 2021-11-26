@@ -1,16 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
-using Moq;
+﻿using Moq;
 using NoBrute.Domain;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace NoBruteTesting
@@ -19,9 +10,8 @@ namespace NoBruteTesting
     /// Tests for the NoBrute Filter Attribute
     /// </summary>
     /// <seealso cref="NoBruteTesting.Abstracts.NoBruteAttributeTestCasesAbstract" />
-    public class NoBruteAttributeTests: Abstracts.NoBruteAttributeTestCasesAbstract
+    public class NoBruteAttributeTests : Abstracts.NoBruteAttributeTestCasesAbstract
     {
-
         /// <summary>
         /// It should increase request time if no green request.
         /// </summary>
@@ -51,8 +41,8 @@ namespace NoBruteTesting
             // Save Time
             double ms = DateTime.Now.TimeOfDay.TotalMilliseconds;
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
-             
-            await attribute.OnActionExecutionAsync(this.GetActionExecutingContextMock(),  this.GetActionExecutionDelegate());
+
+            await attribute.OnActionExecutionAsync(this.GetActionExecutingContextMock(), this.GetActionExecutionDelegate());
 
             double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
 
@@ -64,7 +54,7 @@ namespace NoBruteTesting
         /// </summary>
         /// <param name="expectedStatusCode">The expected status code.</param>
         /// <param name="expectedAutoclear">if set to <c>true</c> [expected autoclear].</param>
-        [TestCase(200, true)] 
+        [TestCase(200, true)]
         public void ItShouldHandleAutoClearForCorrectStatusCode(int expectedStatusCode, bool expectedAutoclear)
         {
             int increaseMS = 1000;
@@ -74,23 +64,23 @@ namespace NoBruteTesting
             attribute.OnActionExecuting(this.GetActionExecutingContextMock());
 
             attribute.OnActionExecuted(this.GetActionExecutedContextMock(expectedStatusCode));
-            
+
             if (expectedAutoclear)
             {
-                mock.Verify(x => 
-                x.AutoProcessRequestRelease(expectedStatusCode, "FALSY_REQUEST"), 
+                mock.Verify(x =>
+                x.AutoProcessRequestRelease(expectedStatusCode, "FALSY_REQUEST"),
                 Times.Once()
                 );
-            } else
+            }
+            else
             {
                 mock.Verify(
                     x => x.AutoProcessRequestRelease(
-                        It.IsAny<int>(), 
-                        It.IsAny<string>()), 
+                        It.IsAny<int>(),
+                        It.IsAny<string>()),
                     Times.Never()
                     );
             }
         }
-         
     }
 }

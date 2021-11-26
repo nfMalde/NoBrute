@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace NoBrute.Exceptions
 {
-    public class NoBruteDependencyException: Exception
+    public class NoBruteDependencyException : Exception
     {
-        public NoBruteDependencyException(string message): base(message:message)
+        public NoBruteDependencyException(string message) : base(message: message)
         {
-
         }
 
         public override string Message
@@ -16,7 +13,7 @@ namespace NoBrute.Exceptions
             get
             {
                 return $"[NoBrute::DependencyException] " + base.Message;
-            } 
+            }
         }
     }
 }
