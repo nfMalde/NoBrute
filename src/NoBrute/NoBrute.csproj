@@ -15,7 +15,7 @@ It will append request times in ms if a local cache entry on the server was foun
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
-	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <PackageReadmeFile>README.MD</PackageReadmeFile>
 
 	  <PackageReleaseNotes>Updated Dependencies and added nuget automated readme.md</PackageReleaseNotes>
   </PropertyGroup>
