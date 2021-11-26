@@ -27,7 +27,7 @@ Enable it in your application:
 
  public IServiceProvider ConfigureServices(IServiceCollection services) {
      
-     // Use Memoory Cache:
+     // Use Memory Cache:
     services.AddMemoryCache();
     // Or an distributed cache (NoBrute will prefer this if both registered)
      services.AddStackExchangeRedisCache(x =>
@@ -145,9 +145,10 @@ The "CheckRequest" Method will return an Object of type NoBruteRequestCheck.
 It will contain the flag "IsGreenRequest" and how much time to append to the request.
 Also some user infos like IP will be returned.
 
-However you have to call the Thread.Sleep by yourself here. The Service will only release and check requests for you but never sleep the requests like the action attribute.
+However you have to call the Thread. Sleep by yourself here. The Service will only release and check requests for you but never sleep the requests like the action attribute.
 
 See more at `/src/Domain/INoBrute.cs` and `/src/Models/NoBruteRequestCheck.cs` in the Github Repository.
+
 
 ## Contribute / Donations
 If you got any Ideas to improve my projects feel free to send an pull request. 
@@ -155,6 +156,7 @@ If you got any Ideas to improve my projects feel free to send an pull request.
 If you like my work and want to support me (or want to buy me a coffee/beer) paypal donation are more than appreciated.
 
  [![Paypal Donate](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL)
+
 
 
 ## Changelog
