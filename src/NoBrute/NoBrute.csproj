@@ -8,16 +8,24 @@
     <RepositoryType>GIT</RepositoryType>
     <PackageTags>BruteForce Protection, .NET CORE, Anti Bruteforce, Brute Force, Security</PackageTags>
     <Authors>Malte</Authors>
-    <Description>Simple and light bruteforce protection for .NET CORE 3.1+
+    <Description>
+		<![CDATA[
+	Simple and light bruteforce protection for .NET CORE 3.1+
 This Lib will protect defined actions in your controllers in making them inefficient to be bruteforced for simple soulutions.
-It will append request times in ms if a local cache entry on the server was found for the same request &amp; request name &amp; method and the hit count reaches an defined limit (so called here: greenrequests) in an amount of time.</Description>
+
+It will append request times in ms if a local cache entry on the server was found for the same request &amp; request name &amp; 
+method and the hit count reaches an defined limit (so called here: greenrequests) in an amount of time.
+	
+	]]></Description>
     <Copyright>2021 Malte</Copyright>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
 	  <PackageReadmeFile>README.MD</PackageReadmeFile>
 
-	  <PackageReleaseNotes>Updated Dependencies and added nuget automated readme.md</PackageReleaseNotes>
+	  <PackageReleaseNotes><![CDATA[
+	    * Upgraded to .NET 5
+	  ]]></PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
