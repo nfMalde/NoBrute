@@ -4,14 +4,13 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using NoBrute.Domain;
 using NoBrute.Exceptions;
 using NoBrute.Models;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -310,27 +309,13 @@ namespace NoBrute.Data
             }
             else
             {
-                this.distributed.Set(cacheKey, this._GetByteArrayFromEntry(item));
+                string json = JsonConvert.SerializeObject(item);
+
+                this.distributed.Set(cacheKey+".6", Encoding.UTF8.GetBytes(json)); // We changed the type of the cache entry serialization. NET6/NET5 versions will use JSON to format 
             }
         }
 
-        /// <summary>
-        /// Gets the byte array from entry.
-        /// </summary>
-        /// <param name="entry">The entry.</param>
-        /// <returns></returns>
-        public byte[] _GetByteArrayFromEntry(NoBruteEntry entry)
-        {
-            if (entry == null)
-                return null;
-
-            BinaryFormatter bf = new BinaryFormatter();
-            using (MemoryStream ms = new MemoryStream())
-            {
-                bf.Serialize(ms, entry);
-                return ms.ToArray();
-            }
-        }
+        
 
         /// <summary>
         /// Gets the entry from byte array.
@@ -342,12 +327,9 @@ namespace NoBrute.Data
             if (data == null)
                 return null;
 
-            BinaryFormatter bf = new BinaryFormatter();
-            using (MemoryStream ms = new MemoryStream(data))
-            {
-                object obj = bf.Deserialize(ms);
-                return (NoBruteEntry)obj;
-            }
+            string json = Encoding.UTF8.GetString(data);
+
+            return JsonConvert.DeserializeObject<NoBruteEntry>(json);
         }
 
         /// <summary>
@@ -512,6 +494,7 @@ namespace NoBrute.Data
             return null;
         }
 
+        #nullable enable
         /// <summary>
         /// Checks the configuration.
         /// </summary>
@@ -524,7 +507,7 @@ namespace NoBrute.Data
             this.checkConfigEntry(section, "TimeUntilReset", typeof(int), this.timeUntilReset, 1);
             this.checkConfigEntry(section, "TimeUntilResetUnit", typeof(char), this.timeUntilResetUnit, 'd');
         }
-
+        #nullable disable
         /// <summary>
         /// Checks the configuration entry.
         /// </summary>

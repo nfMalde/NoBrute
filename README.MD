@@ -7,6 +7,11 @@ Simple and light bruteforce protection for .NET CORE 3.1+
 This Lib will protect defined actions in your controllers in making them inefficient to be bruteforced for simple soulutions.
 It will append request times in ms if a local cache entry on the server was found for the same request & request name & method and the hit count reaches an defined limit (so called here: greenrequests) in an amount of time.
 
+## Important
+Starting with .NET 6 Version of NoBrute(1.2.x), NoBrute will no longer provide binary formatted values to distributed cache.
+
+Installed 1.2.x will invalidate distributed cache entries.
+
 ## Requirements
 NoBrute will require at least one IMemoryCache or IDistributedCache to be regisrted in your application. (Since for obvious reasons storing the info the session wont work cause bots will never send coookies along them)
 
@@ -163,5 +168,7 @@ If you like my work and want to support me (or want to buy me a coffee/beer) pay
 
 Version | Changes 
 ------------ | ------------
+1.2.0 | Migrated to .NET 6, Removed binary formatter
+1.1.0 | Migrated to .NET 5
 1.0.1 | Updated Dependencies and added automated readme.md for nuget
 1.0.0 | Initial Release

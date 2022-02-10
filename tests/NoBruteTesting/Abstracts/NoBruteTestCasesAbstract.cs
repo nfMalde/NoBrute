@@ -5,11 +5,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Newtonsoft.Json;
 using NoBrute.Models;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 
 namespace NoBruteTesting.Abstracts
 {
@@ -82,13 +84,10 @@ namespace NoBruteTesting.Abstracts
         {
             Mock<IDistributedCache> mock = new Mock<IDistributedCache>();
 
-            BinaryFormatter bf = new BinaryFormatter();
-            using (MemoryStream ms = new MemoryStream())
-            {
-                bf.Serialize(ms, desiredReturnEntry);
-                var ar = ms.ToArray();
-                mock.Setup(x => x.Get(It.IsAny<string>())).Returns(ar);
-            }
+            string json = JsonConvert.SerializeObject(desiredReturnEntry);
+
+
+            mock.Setup(x => x.Get(It.IsAny<string>())).Returns(Encoding.UTF8.GetBytes(json));
             mock.Setup(x => x.Set(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>()));
 
             this.provider.AddScoped<IDistributedCache>((f) => mock.Object);

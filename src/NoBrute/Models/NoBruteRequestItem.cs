@@ -15,7 +15,7 @@ namespace NoBrute.Models
 
         public int Hitcount { get; set; }
 
-        public DateTime LastHit { get; set; }
+        public DateTime LastHit { get; set; } 
 
         public bool IsExpired(TimeSpan timeToExpire)
         {
