@@ -23,10 +23,9 @@ method and the hit count reaches an defined limit (so called here: greenrequests
 
 	  <PackageReadmeFile>README.MD</PackageReadmeFile>
 
-	  <PackageReleaseNotes><![CDATA[
-	    * Upgraded to .NET 6
-      * Removed BinaryFormatter
-      * Use of JSON Formatter form Newtonsoft
+	  <PackageReleaseNotes>
+		  <![CDATA[
+	    * Fixed Bug with non-binary formatter and fixed cache bug
 	  ]]></PackageReleaseNotes>
   </PropertyGroup>
 
@@ -34,12 +33,12 @@ method and the hit count reaches an defined limit (so called here: greenrequests
 	<PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
 
 	  <None Include="..\..\nugetdocs\README.MD" Pack="true" PackagePath="\" />
   </ItemGroup>

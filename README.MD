@@ -168,6 +168,7 @@ If you like my work and want to support me (or want to buy me a coffee/beer) pay
 
 Version | Changes 
 ------------ | ------------
+1.2.1 | Fixed Bug with non-binary formatter and fixed cache bug
 1.2.0 | Migrated to .NET 6, Removed binary formatter
 1.1.0 | Migrated to .NET 5
 1.0.1 | Updated Dependencies and added automated readme.md for nuget

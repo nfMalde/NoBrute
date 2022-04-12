@@ -281,9 +281,9 @@ namespace NoBrute.Data
         private bool _TryGetCacheValue(string cacheKey, out NoBruteEntry item)
         {
             if (this.distributed == null)
-                return this.cache.TryGetValue(cacheKey, out item);
+                return this.cache.TryGetValue(cacheKey + ".6", out item);
 
-            byte[] result = this.distributed.Get(cacheKey);
+            byte[] result = this.distributed.Get(cacheKey + ".6");
 
             if (result != null)
             {
@@ -305,7 +305,7 @@ namespace NoBrute.Data
         {
             if (this.distributed == null)
             {
-                this.cache.Set<NoBruteEntry>(cacheKey, item);
+                this.cache.Set<NoBruteEntry>(cacheKey + ".6", item);
             }
             else
             {
@@ -321,13 +321,13 @@ namespace NoBrute.Data
         /// Gets the entry from byte array.
         /// </summary>
         /// <param name="data">The data.</param>
-        /// <returns></returns>
+        /// <returns></returns> 
         private NoBruteEntry _GetEntryFromByteArray(byte[] data)
         {
             if (data == null)
                 return null;
 
-            string json = Encoding.UTF8.GetString(data);
+                string json = Encoding.UTF8.GetString(data);
 
             return JsonConvert.DeserializeObject<NoBruteEntry>(json);
         }
