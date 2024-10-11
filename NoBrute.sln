@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{40F1F112
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NoBruteTesting", "tests\NoBruteTesting\NoBruteTesting.csproj", "{3E774AF5-CB50-476F-826D-904276C1204C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NoBrute", "src\NoBrute\NoBrute.csproj", "{9361673C-E2CC-4275-9B78-07B51D81879B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NoBrute", "src\NoBrute.csproj", "{9361673C-E2CC-4275-9B78-07B51D81879B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
