@@ -3,12 +3,16 @@
  [![Paypal Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL)
 
 # NoBrute (by Malte)
-Simple and light bruteforce protection for .NET CORE 3.1+
+Simple and light bruteforce protection for .NET 8
 This Lib will protect defined actions in your controllers in making them inefficient to be bruteforced for simple soulutions.
 It will append request times in ms if a local cache entry on the server was found for the same request & request name & method and the hit count reaches an defined limit (so called here: greenrequests) in an amount of time.
 
 ## Requirements
 NoBrute will require at least one IMemoryCache or IDistributedCache to be regisrted in your application. (Since for obvious reasons storing the info the session wont work cause bots will never send coookies along them)
+
+**External Libraries**
+This Library uses the following lib(s) fro archive its functionality:
+* [Shouldly](https://github.com/shouldly)
 
 ## Install
 Using the nuget package manager:
@@ -163,5 +167,9 @@ If you like my work and want to support me (or want to buy me a coffee/beer) pay
 
 Version | Changes 
 ------------ | ------------
+2.0.0 | Upgraded to .net 8
+1.2.1 | Fixed Bug with non-binary formatter and fixed cache bug
+1.2.0 | Migrated to .NET 6, Removed binary formatter
+1.1.0 | Migrated to .NET 5
 1.0.1 | Updated Dependencies and added automated readme.md for nuget
 1.0.0 | Initial Release
