@@ -4,7 +4,7 @@ using NoBrute.Models;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-
+using Shouldly;
 namespace NoBruteTesting
 {
     /// <summary>
@@ -50,10 +50,10 @@ namespace NoBruteTesting
             )
         {
             List<string> cacheTypes = new List<string>()
-            {
-                "Memory",
-                "Distributed"
-            };
+                {
+                    "Memory",
+                    "Distributed"
+                };
 
             foreach (string cacheType in cacheTypes)
             {
@@ -87,12 +87,12 @@ namespace NoBruteTesting
                 if (statusCodeForAutoRelease == expectedStatusCode)
                 {
                     // In this case we expect that the requests got released
-                    Assert.IsEmpty(entry.Requests, $"Request not  removed at cache type:{cacheType}");
+                    entry.Requests.ShouldBeEmpty($"Request not removed at cache type:{cacheType}");
                 }
                 else
                 {
                     // Here we expect that the Requests got not released
-                    Assert.AreEqual(requestsBefore, entry.Requests.Count, $"Request unexpected removed at cache type:{cacheType}");
+                    entry.Requests.Count.ShouldBe(requestsBefore, $"Request unexpected removed at cache type:{cacheType}");
                 }
             }
         }
@@ -122,8 +122,8 @@ namespace NoBruteTesting
 
             NoBruteRequestCheck rCheck = noBrute.CheckRequest("GREEN_REQUEST");
 
-            Assert.AreEqual(0, rCheck.AppendRequestTime);
-            Assert.IsTrue(rCheck.IsGreenRequest);
+            rCheck.AppendRequestTime.ShouldBe(0);
+            rCheck.IsGreenRequest.ShouldBeTrue();
         }
 
         /// <summary>
@@ -159,9 +159,9 @@ namespace NoBruteTesting
 
             NoBruteRequestCheck rCheck = noBrute.CheckRequest(requestName);
 
-            Assert.NotNull(rCheck);
-            Assert.False(rCheck.IsGreenRequest);
-            Assert.AreEqual(10, rCheck.AppendRequestTime);
+            rCheck.ShouldNotBeNull();
+            rCheck.IsGreenRequest.ShouldBeFalse();
+            rCheck.AppendRequestTime.ShouldBe(10);
         }
 
         #endregion Memory Cache Test Cases
@@ -189,8 +189,8 @@ namespace NoBruteTesting
 
             NoBruteRequestCheck rCheck = noBrute.CheckRequest("GREEN_REQUEST");
 
-            Assert.AreEqual(0, rCheck.AppendRequestTime);
-            Assert.IsTrue(rCheck.IsGreenRequest);
+            rCheck.AppendRequestTime.ShouldBe(0);
+            rCheck.IsGreenRequest.ShouldBeTrue();
         }
 
         /// <summary>
@@ -226,9 +226,9 @@ namespace NoBruteTesting
 
             NoBruteRequestCheck rCheck = noBrute.CheckRequest(requestName);
 
-            Assert.NotNull(rCheck);
-            Assert.False(rCheck.IsGreenRequest);
-            Assert.AreEqual(10, rCheck.AppendRequestTime);
+            rCheck.ShouldNotBeNull();
+            rCheck.IsGreenRequest.ShouldBeFalse();
+            rCheck.AppendRequestTime.ShouldBe(10);
         }
 
         #endregion Distributed Cache Test Cases

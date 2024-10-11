@@ -1,6 +1,7 @@
 ﻿using Moq;
 using NoBrute.Domain;
 using NUnit.Framework;
+using Shouldly;
 using System;
 using System.Threading.Tasks;
 
@@ -27,7 +28,7 @@ namespace NoBruteTesting
 
             double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
 
-            Assert.GreaterOrEqual((ms2 - ms), increaseMS); // We expect that that the request was delayed by 1000ms
+            (ms2 - ms).ShouldBeGreaterThanOrEqualTo(increaseMS); // We expect that that the request was delayed by 1000ms
         }
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace NoBruteTesting
 
             double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
 
-            Assert.GreaterOrEqual((ms2 - ms), increaseMS); // We expect that that the request was delayed by 1000ms
+            (ms2 - ms).ShouldBeGreaterThanOrEqualTo(increaseMS); // We expect that that the request was delayed by 1000ms
         }
 
         /// <summary>
