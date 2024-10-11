@@ -10,7 +10,7 @@
     <Authors>Malte</Authors>
     <Description>
 		<![CDATA[
-	Simple and light bruteforce protection for .NET CORE 3.1+
+	Simple and light bruteforce protection for .NET 8
 This Lib will protect defined actions in your controllers in making them inefficient to be bruteforced for simple soulutions.
 
 It will append request times in ms if a local cache entry on the server was found for the same request &amp; request name &amp; 
