@@ -1,10 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using NoBrute.Domain;
 using NoBrute.Models;
-using NUnit.Framework;
+using Shouldly;
 using System;
 using System.Collections.Generic;
-using Shouldly;
+using Xunit;
+
 namespace NoBruteTesting
 {
     /// <summary>
@@ -16,9 +17,9 @@ namespace NoBruteTesting
         #region Global Test Cases
 
         /// <summary>
-        /// Tests if expection is thrown when no cache module is registered to service provider
+        /// Tests if exception is thrown when no cache module is registered to service provider
         /// </summary>
-        [Test]
+        [Fact]
         public void ItShouldFailIfNoCacheServiceIsRegistered()
         {
             Assert.Throws<NoBrute.Exceptions.NoBruteDependencyException>(() =>
@@ -40,10 +41,11 @@ namespace NoBruteTesting
         /// </summary>
         /// <param name="statusCodeForAutoRelease">The status code for automatic release.</param>
         /// <param name="expectedStatusCode">The expected status code.</param>
-        [TestCase(200, 200)]
-        [TestCase(200, 401)]
-        [TestCase(200, 500)]
-        [TestCase(200, 404)]
+        [Theory]
+        [InlineData(200, 200)]
+        [InlineData(200, 401)]
+        [InlineData(200, 500)]
+        [InlineData(200, 404)]
         public void ItShouldHandleRequestReleaseForCorrectStatusCode(
             int statusCodeForAutoRelease,
             int expectedStatusCode
@@ -104,7 +106,7 @@ namespace NoBruteTesting
         /// <summary>
         /// It should not increase request time if green request with memory cache.
         /// </summary>
-        [Test]
+        [Fact]
         public void ItShouldNotIncreaseRequestTimeIfGreenRequestWithMemoryCache()
         {
             // Entry
@@ -127,10 +129,10 @@ namespace NoBruteTesting
         }
 
         /// <summary>
-        /// It should increase request time if excceeded green requests count memory cache.
+        /// It should increase request time if exceeded green requests count memory cache.
         /// </summary>
-        [Test]
-        public void ItShouldIncreaseRequestTimeIfExcceededGreenRequestsCountMemoryCache()
+        [Fact]
+        public void ItShouldIncreaseRequestTimeIfExceededGreenRequestsCountMemoryCache()
         {
             string requestName = "FALSY_REQUEST";
 
@@ -171,7 +173,7 @@ namespace NoBruteTesting
         /// <summary>
         /// It should not increase request time if green request with distributed cache.
         /// </summary>
-        [Test]
+        [Fact]
         public void ItShouldNotIncreaseRequestTimeIfGreenRequestWithDistributedCache()
         {
             // Entry
@@ -194,10 +196,10 @@ namespace NoBruteTesting
         }
 
         /// <summary>
-        /// It should increase request time if excceeded green requests count distributed cache.
+        /// It should increase request time if exceeded green requests count distributed cache.
         /// </summary>
-        [Test]
-        public void ItShouldIncreaseRequestTimeIfExcceededGreenRequestsCountDistributedCache()
+        [Fact]
+        public void ItShouldIncreaseRequestTimeIfExceededGreenRequestsCountDistributedCache()
         {
             string requestName = "FALSY_REQUEST";
 
