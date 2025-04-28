@@ -4,7 +4,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using NoBrute.Domain;
 using NoBrute.Exceptions;
 using NoBrute.Models;
@@ -21,337 +20,157 @@ namespace NoBrute.Data
     /// </summary>
     public class NoBrute : INoBrute
     {
-        /// <summary>
-        /// The enabled
-        /// </summary>
-        private bool? enabled;
-
-        /// <summary>
-        /// The green retries
-        /// </summary>
-        private int? greenRetries;
-
-        /// <summary>
-        /// The increase request time ms
-        /// </summary>
-        private int? increaseRequestTimeMs;
-
-        /// <summary>
-        /// The time until reset
-        /// </summary>
-        private int? timeUntilReset;
-
-        /// <summary>
-        /// The time until reset unit
-        /// </summary>
-        private Models.TimeUntilResetUnit? timeUntilResetUnit;
-
-        /// <summary>
-        /// The logger
-        /// </summary>
+        private readonly bool enabled;
+        private readonly int greenRetries;
+        private readonly int increaseRequestTimeMs;
+        private readonly int timeUntilReset;
+        private readonly TimeUntilResetUnit timeUntilResetUnit;
         private readonly ILogger<NoBrute> logger;
-
-        /// <summary>
-        /// The HTTP context accessor
-        /// </summary>
         private readonly IHttpContextAccessor httpContextAccessor;
-
-        /// <summary>
-        /// The cache
-        /// </summary>
         private readonly IMemoryCache cache;
-
-        /// <summary>
-        /// The distributed
-        /// </summary>
         private readonly IDistributedCache distributed;
-
-        /// <summary>
-        /// The status codes for automatic process
-        /// </summary>
         private readonly int[] statusCodesForAutoProcess;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NoBrute"/> class.
-        /// </summary>
-        /// <param name="provider">The provider.</param>
-        /// <exception cref="NoBruteDependencyException">
-        /// NoBrute requires MemoryCahce to be used. Install the Package: Microsoft.Extensions.Caching.Abstractions and use it in your ConfigureServices method with 'services.AddMemoryCache();'
-        /// or
-        /// IConfiguration was not found. Ensure you registered your configuration and its accessible.
-        /// </exception>
         public NoBrute(IServiceProvider provider)
         {
-            this.logger = provider.GetService<ILogger<NoBrute>>();
-            this.httpContextAccessor = provider.GetService<IHttpContextAccessor>();
-            // Get Services required for running
-            IMemoryCache memoryCache = provider.GetService<IMemoryCache>();
-            IDistributedCache distributedCache = provider.GetService<IDistributedCache>();
-
+            logger = provider.GetService<ILogger<NoBrute>>();
+            httpContextAccessor = provider.GetService<IHttpContextAccessor>();
+            cache = provider.GetService<IMemoryCache>();
+            distributed = provider.GetService<IDistributedCache>();
             IConfiguration config = provider.GetService<IConfiguration>();
 
-            this.logger.LogDebug("Checking for Existence of MemoryCache Service...");
-
-            if (memoryCache == null && distributedCache == null)
-            {
-                this.logger.LogError("No MemoryCache or IDistributedCache Service registered. Throwing exception.");
-                throw new NoBruteDependencyException("NoBrute requires MemoryCache or IDistributedCache to be used. Install the Package: Microsoft.Extensions.Caching and use it in your ConfigureServices method with 'services.AddMemoryCache();'");
-            }
-
-            this.cache = memoryCache;
-
-            this.distributed = distributedCache;
-
-            this.logger.LogDebug("Memory Cache is registered. Getting Config.");
+            if (cache == null && distributed == null)
+                throw new NoBruteDependencyException("NoBrute requires MemoryCache or IDistributedCache. Add 'services.AddMemoryCache();' in ConfigureServices.");
 
             if (config == null)
-            {
-                this.logger.LogError("Something went wrong with the IConfiguration Service.");
-                throw new NoBruteDependencyException("IConfiguration was not found. Ensure you registered your configuration and its accessible.");
-            }
+                throw new NoBruteDependencyException("IConfiguration not found. Ensure it is registered.");
 
-            this.logger.LogDebug("Reading Config Entry \"NoBrute\"");
             IConfigurationSection section = config.GetSection("NoBrute");
+            enabled = section.GetValue("Enabled", true);
+            greenRetries = section.GetValue("GreenRetries", 10);
+            increaseRequestTimeMs = section.GetValue("IncreaseRequestTime", 20);
+            timeUntilReset = section.GetValue("TimeUntilReset", 2);
+            timeUntilResetUnit = GetUnit(section.GetValue<char>("TimeUntilResetUnit", 'H'));
+            statusCodesForAutoProcess = section.GetSection("StatusCodesForAutoProcess")
+                .AsEnumerable()
+                .Select(x => int.TryParse(x.Value, out var val) ? val : 200)
+                .ToArray();
 
-            this.enabled = section?.GetValue<bool>("Enabled", true);
-            this.greenRetries = section?.GetValue<int>("GreenRetries", 10);
-            this.increaseRequestTimeMs = section?.GetValue<int>("IncreaseRequestTime", 20);
-            this.timeUntilReset = section?.GetValue<int>("TimeUntilReset", 2);
-            this.timeUntilResetUnit = this.GetUnit(section?.GetValue<char>("TimeUntilResetUnit", 'H'));
-            IConfigurationSection statusCodes = section.GetSection("StatusCodesForAutoProcess");
-            this.statusCodesForAutoProcess = statusCodes.AsEnumerable().Select(x => Convert.ToInt32(x.Value))?.ToArray() ?? new int[] { 200 };
-
-            if (this.statusCodesForAutoProcess.Length == 0)
-            {
-                this.statusCodesForAutoProcess = new int[] { 200 };
-            }
-
-            this.logger.LogDebug("Config read. Validating configuration...");
-
-            this.checkConfig(section);
-
-            this.logger.LogDebug("Configuration is valid.");
+            ValidateConfig(section);
         }
 
-        /// <summary>
-        /// Checks the request.
-        /// </summary>
-        /// <param name="requestName">Name of the request.</param>
-        /// <returns></returns>
         public NoBruteRequestCheck CheckRequest(string requestName = null)
         {
-            using (this.logger.BeginScope("CheckRequest"))
+            if (!enabled) return null;
+
+            HttpRequest request = httpContextAccessor.HttpContext.Request;
+            string name = requestName ?? request.Path;
+            string ip = httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
+            string cacheKey = GenerateCacheKey(ip);
+
+            if (!TryGetCacheValue(cacheKey, out var noBruteEntry))
             {
-                if (!this.enabled.Value)
-                {
-                    this.logger.LogDebug("NoBrute is disabled. Please Enable it via config. NoBrute->Enabled:true");
-                    return null;
-                }
-                HttpRequest request = this.httpContextAccessor.HttpContext.Request;
-                string name = requestName ?? request.Path;
-                string ip = this.httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
-                string ip_censored = null;
-                string cacheKey = this.generateCacheKey(ip);
-
-                if (ip.Contains('.'))
-                {
-                    ip_censored = this.censoreIp(ip, '.');
-                }
-                else
-                {
-                    ip_censored = this.censoreIp(ip, ':');
-                }
-
-                this.logger.LogDebug($"Checking Request Entries for IP {ip_censored} by using cache key: {cacheKey}");
-                Models.NoBruteEntry noBruteEntry = null;
-
-                if (!this._TryGetCacheValue(cacheKey, out noBruteEntry))
-                {
-                    noBruteEntry = new NoBruteEntry();
-                    noBruteEntry.IP = ip;
-                    noBruteEntry.Requests = new List<NoBruteRequestItem>();
-                }
-
-                this.clearExpiredItems(noBruteEntry);
-                NoBruteRequestItem requestItem = this.manageRequestEntry(noBruteEntry, name, request);
-
-                this._SetCacheItem(cacheKey, noBruteEntry);
-                this.logger.LogDebug("Added Cache Entry");
-                this.logger.LogDebug("Checking request item...");
-
-                NoBruteRequestCheck result = new NoBruteRequestCheck();
-
-                result.IsGreenRequest = (requestItem.Hitcount <= this.greenRetries);
-                result.RemoteAddr = ip;
-                result.RequestNum = requestItem.Hitcount;
-                result.ResetTime = requestItem.LastHit + this.GetExpireTimespan();
-
-                this.logger.LogDebug($"Request {requestItem.RequestName} has HitCount of {requestItem.Hitcount}. Counter Reset at {result.ResetTime}");
-
-                if (!result.IsGreenRequest)
-                {
-                    result.AppendRequestTime = (int)((requestItem.Hitcount - this.greenRetries) * this.increaseRequestTimeMs);
-
-                    this.logger.LogDebug($"Request {requestItem.RequestName} is not a green request. Appending request deleay of {result.AppendRequestTime}ms");
-                }
-
-                return result;
+                noBruteEntry = new NoBruteEntry { IP = ip, Requests = new List<NoBruteRequestItem>() };
             }
+
+            ClearExpiredItems(noBruteEntry);
+            var requestItem = ManageRequestEntry(noBruteEntry, name, request);
+            SetCacheItem(cacheKey, noBruteEntry);
+
+            return new NoBruteRequestCheck
+            {
+                IsGreenRequest = requestItem.Hitcount <= greenRetries,
+                RemoteAddr = ip,
+                RequestNum = requestItem.Hitcount,
+                ResetTime = requestItem.LastHit + GetExpireTimespan(),
+                AppendRequestTime = Math.Max(0, (requestItem.Hitcount - greenRetries) * increaseRequestTimeMs)
+            };
         }
 
-        /// <summary>
-        /// Releases the request and resets the request delay.
-        /// </summary>
-        /// <param name="requestName">Name of the request.</param>
-        /// <returns></returns>
         public bool ReleaseRequest(string requestName = null)
         {
-            HttpRequest request = this.httpContextAccessor.HttpContext.Request;
+            HttpRequest request = httpContextAccessor.HttpContext.Request;
             string name = requestName ?? request.Path;
-            string ip = this.httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
-            string cacheKey = this.generateCacheKey(ip);
-            string ip_censored = null;
+            string ip = httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
+            string cacheKey = GenerateCacheKey(ip);
 
-            if (ip.Contains('.'))
+            if (!TryGetCacheValue(cacheKey, out var entry) || entry == null) return true;
+
+            var requestItem = entry.Requests.FirstOrDefault(x => x.RequestName == name && x.RequestMethod == request.Method);
+            if (requestItem != null)
             {
-                ip_censored = this.censoreIp(ip, '.');
-            }
-            else
-            {
-                ip_censored = this.censoreIp(ip, ':');
-            }
-
-            using (this.logger.BeginScope("ReleaseRequest"))
-            {
-                this.logger.LogDebug($"Trying to fetch cache entry >{cacheKey}< for IP >{ip_censored}<");
-                NoBruteEntry entry = null;
-
-                bool exists = this._TryGetCacheValue(cacheKey, out entry);
-
-                if (!exists || entry == null)
-                {
-                    this.logger.LogDebug($"No Cache Entry found. Request allrdy released or never saved.");
-
-                    return true;
-                }
-
-                this.logger.LogDebug($"Trying to find request with name >{name}<...");
-
-                NoBruteRequestItem requestItem = this.manageRequestEntry(entry, name, request);
-
-                if (requestItem != null)
-                {
-                    this.logger.LogDebug($"Found request in cache. Deleting...");
-
-                    entry.Requests.Remove(requestItem);
-
-                    this._SetCacheItem(cacheKey, entry);
-                    this.logger.LogDebug($"Deleted request item >{cacheKey}.{name}<");
-                    return true;
-                }
+                entry.Requests.Remove(requestItem);
+                SetCacheItem(cacheKey, entry);
+                return true;
             }
 
             return false;
         }
 
-        /// <summary>
-        /// Release an given request if the status code is inside the configurable status codes for auto release.
-        /// </summary>
-        /// <param name="status">The status.</param>
-        /// <param name="requestName">Name of the request.</param>
-        /// <returns></returns>
         public bool AutoProcessRequestRelease(int status, string requestName = null)
         {
-            if (this.statusCodesForAutoProcess.Any(x => x == status))
+            if (statusCodesForAutoProcess.Contains(status))
             {
-                this.ReleaseRequest(requestName);
-
+                ReleaseRequest(requestName);
                 return true;
             }
-
             return false;
         }
 
-        /// <summary>
-        /// Tries the get cache value.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="item">The item.</param>
-        /// <returns></returns>
-        private bool _TryGetCacheValue(string cacheKey, out NoBruteEntry item)
+        private bool TryGetCacheValue(string cacheKey, out NoBruteEntry item)
         {
-            if (this.distributed == null)
-                return this.cache.TryGetValue(cacheKey + ".6", out item);
+            if (distributed == null)
+                return cache.TryGetValue(cacheKey, out item);
 
-            byte[] result = this.distributed.Get(cacheKey + ".6");
-
-            if (result != null)
-            {
-                item = this._GetEntryFromByteArray(result);
-                return true;
-            }
-
-            item = null;
-
-            return false;
+            var result = distributed.Get(cacheKey);
+            item = result != null ? Deserialize<NoBruteEntry>(result) : null;
+            return item != null;
         }
 
-        /// <summary>
-        /// Sets the cache item.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="item">The item.</param>
-        private void _SetCacheItem(string cacheKey, NoBruteEntry item)
+        private void SetCacheItem(string cacheKey, NoBruteEntry item)
         {
-            if (this.distributed == null)
+            if (distributed == null)
             {
-                this.cache.Set<NoBruteEntry>(cacheKey + ".6", item);
+                cache.Set(cacheKey, item);
             }
             else
             {
-                string json = JsonConvert.SerializeObject(item);
-
-                this.distributed.Set(cacheKey+".6", Encoding.UTF8.GetBytes(json)); // We changed the type of the cache entry serialization. NET6/NET5 versions will use JSON to format 
+                distributed.Set(cacheKey, Serialize(item));
             }
         }
 
-        
-
-        /// <summary>
-        /// Gets the entry from byte array.
-        /// </summary>
-        /// <param name="data">The data.</param>
-        /// <returns></returns> 
-        private NoBruteEntry _GetEntryFromByteArray(byte[] data)
+        private void ClearExpiredItems(NoBruteEntry entry)
         {
-            if (data == null)
-                return null;
-
-                string json = Encoding.UTF8.GetString(data);
-
-            return JsonConvert.DeserializeObject<NoBruteEntry>(json);
+            var expireIn = GetExpireTimespan();
+            entry.Requests = entry.Requests.Where(x => !x.IsExpired(expireIn)).ToList();
         }
 
-        /// <summary>
-        /// Manages the request entry.
-        /// </summary>
-        /// <param name="entry">The entry.</param>
-        /// <param name="requestName">Name of the request.</param>
-        /// <param name="data">The data.</param>
-        /// <returns></returns>
-        private NoBruteRequestItem manageRequestEntry(NoBruteEntry entry, string requestName, HttpRequest data)
+        private TimeSpan GetExpireTimespan()
         {
-            if (entry.Requests.Any(x => x.RequestName == requestName && x.RequestMethod == data.Method))
+            return timeUntilResetUnit switch
             {
-                NoBruteRequestItem item = entry.Requests.First(x => x.RequestName == requestName && x.RequestMethod == data.Method);
-                item.Hitcount++;
-                item.LastHit = DateTime.Now;
+                TimeUntilResetUnit.Years => TimeSpan.FromDays(timeUntilReset * 365),
+                TimeUntilResetUnit.Months => TimeSpan.FromDays(timeUntilReset * 30),
+                TimeUntilResetUnit.Days => TimeSpan.FromDays(timeUntilReset),
+                TimeUntilResetUnit.Hours => TimeSpan.FromHours(timeUntilReset),
+                TimeUntilResetUnit.Minutes => TimeSpan.FromMinutes(timeUntilReset),
+                TimeUntilResetUnit.Seconds => TimeSpan.FromSeconds(timeUntilReset),
+                TimeUntilResetUnit.Miliseconds => TimeSpan.FromMilliseconds(timeUntilReset),
+                _ => TimeSpan.Zero
+            };
+        }
 
-                return item;
+        private NoBruteRequestItem ManageRequestEntry(NoBruteEntry entry, string requestName, HttpRequest data)
+        {
+            var requestItem = entry.Requests.FirstOrDefault(x => x.RequestName == requestName && x.RequestMethod == data.Method);
+            if (requestItem != null)
+            {
+                requestItem.Hitcount++;
+                requestItem.LastHit = DateTime.Now;
             }
             else
             {
-                NoBruteRequestItem item = new NoBruteRequestItem()
+                requestItem = new NoBruteRequestItem
                 {
                     Hitcount = 1,
                     RequestMethod = data.Method,
@@ -360,183 +179,38 @@ namespace NoBrute.Data
                     RequestQuery = data.QueryString.HasValue ? data.QueryString.ToString() : null,
                     LastHit = DateTime.Now
                 };
-                entry.Requests.Add(item);
-
-                return item;
+                entry.Requests.Add(requestItem);
             }
+            return requestItem;
         }
 
-        /// <summary>
-        /// Clears the expired items.
-        /// </summary>
-        /// <param name="entry">The entry.</param>
-        private void clearExpiredItems(NoBruteEntry entry)
+        private string GenerateCacheKey(string ip)
         {
-            TimeSpan expireIn = this.GetExpireTimespan();
-
-            switch (this.timeUntilResetUnit)
-            {
-                case TimeUntilResetUnit.Years:
-                    expireIn = new TimeSpan(this.timeUntilReset.Value * 365, 0, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Months:
-                    expireIn = new TimeSpan(this.timeUntilReset.Value * 30, 0, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Days:
-                    expireIn = new TimeSpan(this.timeUntilReset.Value, 0, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Hours:
-                    expireIn = new TimeSpan(0, this.timeUntilReset.Value, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Minutes:
-                    expireIn = new TimeSpan(0, 0, this.timeUntilReset.Value, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Seconds:
-                    expireIn = new TimeSpan(0, 0, 0, this.timeUntilReset.Value, 0);
-                    break;
-
-                case TimeUntilResetUnit.Miliseconds:
-                    expireIn = new TimeSpan(0, 0, 0, 0, this.timeUntilReset.Value);
-                    break;
-            }
-
-            entry.Requests = entry.Requests.Where(x => !x.IsExpired(expireIn)).ToList();
+            using var hasher = SHA512.Create();
+            return string.Concat(hasher.ComputeHash(Encoding.UTF8.GetBytes(ip)).Select(b => b.ToString("x2")));
         }
 
-        /// <summary>
-        /// Gets the expire timespan.
-        /// </summary>
-        /// <returns></returns>
-        private TimeSpan GetExpireTimespan()
+        private TimeUntilResetUnit GetUnit(char value)
         {
-            TimeSpan expireIn = new TimeSpan();
-
-            switch (this.timeUntilResetUnit)
-            {
-                case TimeUntilResetUnit.Years:
-                    expireIn = new TimeSpan(this.timeUntilReset.Value * 365, 0, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Months:
-                    expireIn = new TimeSpan(this.timeUntilReset.Value * 30, 0, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Days:
-                    expireIn = new TimeSpan(this.timeUntilReset.Value, 0, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Hours:
-                    expireIn = new TimeSpan(0, this.timeUntilReset.Value, 0, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Minutes:
-                    expireIn = new TimeSpan(0, 0, this.timeUntilReset.Value, 0, 0);
-                    break;
-
-                case TimeUntilResetUnit.Seconds:
-                    expireIn = new TimeSpan(0, 0, 0, this.timeUntilReset.Value, 0);
-                    break;
-
-                case TimeUntilResetUnit.Miliseconds:
-                    expireIn = new TimeSpan(0, 0, 0, 0, this.timeUntilReset.Value);
-                    break;
-            }
-
-            return expireIn;
+            return Enum.TryParse<TimeUntilResetUnit>(value.ToString(), out var unit) ? unit : TimeUntilResetUnit.Hours;
         }
 
-        /// <summary>
-        /// Generates the cache key.
-        /// </summary>
-        /// <param name="ip">The ip.</param>
-        /// <returns></returns>
-        private string generateCacheKey(string ip)
+        private void ValidateConfig(IConfigurationSection section)
         {
-            string key = null;
-
-            using (SHA512 hasher = SHA512.Create())
-            {
-                byte[] data = Encoding.UTF8.GetBytes(ip);
-                // Create a new Stringbuilder to collect the bytes
-                // and create a string.
-                var sBuilder = new StringBuilder();
-
-                // Loop through each byte of the hashed data
-                // and format each one as a hexadecimal string.
-                for (int i = 0; i < data.Length; i++)
-                {
-                    sBuilder.Append(data[i].ToString("x2"));
-                }
-
-                key = sBuilder.ToString(); ;
-            }
-
-            return key;
+            ValidateConfigEntry(section, "Enabled", typeof(bool), enabled);
+            ValidateConfigEntry(section, "GreenRetries", typeof(int), greenRetries);
+            ValidateConfigEntry(section, "IncreaseRequestTime", typeof(int), increaseRequestTimeMs);
+            ValidateConfigEntry(section, "TimeUntilReset", typeof(int), timeUntilReset);
+            ValidateConfigEntry(section, "TimeUntilResetUnit", typeof(char), timeUntilResetUnit);
         }
 
-        /// <summary>
-        /// Gets the unit of expire.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        /// <returns></returns>
-        private Models.TimeUntilResetUnit? GetUnit(char? value)
+        private void ValidateConfigEntry(IConfigurationSection section, string name, Type expectedType, object value)
         {
-            if (value.HasValue)
-            {
-                return (TimeUntilResetUnit)value;
-            }
-
-            return null;
+            if (value == null)
+                throw new NoBruteConfigurationException($"Invalid value for configuration NoBrute->{name}. Expected type: {expectedType.FullName}");
         }
 
-        #nullable enable
-        /// <summary>
-        /// Checks the configuration.
-        /// </summary>
-        /// <param name="section">The section.</param>
-        private void checkConfig(IConfigurationSection? section)
-        {
-            this.checkConfigEntry(section, "Enabled", typeof(bool), this.enabled, true);
-            this.checkConfigEntry(section, "GreenRetries", typeof(int), this.greenRetries, 10);
-            this.checkConfigEntry(section, "IncreaseRequestTime", typeof(int), this.increaseRequestTimeMs, 20);
-            this.checkConfigEntry(section, "TimeUntilReset", typeof(int), this.timeUntilReset, 1);
-            this.checkConfigEntry(section, "TimeUntilResetUnit", typeof(char), this.timeUntilResetUnit, 'd');
-        }
-        #nullable disable
-        /// <summary>
-        /// Checks the configuration entry.
-        /// </summary>
-        /// <param name="section">The section.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="expectedType">The expected type.</param>
-        /// <param name="currentvalue">The currentvalue.</param>
-        /// <exception cref="NoBruteConfigurationException">Invalid value for configuration NoBrute->{name}. Value \"{section?.GetValue<string>(name, "NULL") ?? "NULL"}\" has to be of type {expectedType.FullName}</exception>
-        private void checkConfigEntry(IConfigurationSection section, string name, Type expectedType, object currentvalue, object defaultValue)
-        {
-            this.logger.LogDebug($"Configuration Item NoBrute->{name} will be checked now...");
-            if (currentvalue == null)
-            {
-                this.logger.LogError($"Configuration Value for Item NoBrute->{name} was Invalid.");
-                throw new NoBruteConfigurationException($"Invalid value for configuration NoBrute->{name}. Value \"{section?.GetValue<string>(name, defaultValue.ToString()) ?? "NULL"}\" has to be of type {expectedType.FullName}");
-            }
-
-            this.logger.LogDebug($"Configuration Item NoBrute->{name} is valid with value {section?.GetValue<string>(name, defaultValue.ToString()) ?? "NULL"}");
-        }
-
-        /// <summary>
-        /// Censores the ip.
-        /// </summary>
-        /// <param name="ip">The ip.</param>
-        /// <param name="seperator">The seperator.</param>
-        /// <returns></returns>
-        private string censoreIp(string ip, char seperator)
-        {
-            return string.Join("", ip.ToCharArray().Select(x => '*').Select(x => x.ToString()));
-        }
+        private static byte[] Serialize<T>(T obj) => Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(obj));
+        private static T Deserialize<T>(byte[] data) => System.Text.Json.JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(data));
     }
 }

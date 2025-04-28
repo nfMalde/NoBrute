@@ -9,104 +9,71 @@ namespace NoBrute
     /// NoBruteAttribute
     /// Protects the given Action against brute force attacks
     /// </summary>
-    /// <seealso cref="Microsoft.AspNetCore.Mvc.Filters.ActionFilterAttribute" />
     public class NoBruteAttribute : ActionFilterAttribute
     {
-        /// <summary>
-        /// The request name
-        /// </summary>
-        private string requestName = null;
-
-        /// <summary>
-        /// The automatic process flag. If true, request delay will be cleared automatically for set status coces (Configurable)
-        /// </summary>
-        /// <remarks>
-        /// Configurable via NoBrute->StatusCodesForAutoProcess
-        /// </remarks>
-        private bool autoProcess = true;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NoBruteAttribute"/> class.
-        /// </summary>
-        /// <param name="requestName">Name of the request.</param>
-        public NoBruteAttribute(string requestName)
-        {
-            this.requestName = requestName;
-        }
+        private readonly string requestName;
+        private readonly bool autoProcess;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NoBruteAttribute"/> class.
         /// </summary>
         /// <param name="requestName">Name of the request.</param>
         /// <param name="autoProcess">if set to <c>true</c> [automatic process].</param>
-        public NoBruteAttribute(string requestName, bool autoProcess) : this(requestName)
+        public NoBruteAttribute(string requestName = null, bool autoProcess = true)
         {
+            this.requestName = requestName;
             this.autoProcess = autoProcess;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NoBruteAttribute"/> class.
-        /// </summary>
-        public NoBruteAttribute()
-        {
-        }
-
-        #region Before Request
-
-        /// <summary>
+        /// Executes before the action.
         /// </summary>
         /// <param name="context"></param>
-        /// <inheritdoc />
         public override void OnActionExecuting(ActionExecutingContext context)
         {
-            INoBrute service = (INoBrute)context.HttpContext.RequestServices.GetService(typeof(INoBrute));
+            var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
+            var check = service?.CheckRequest(requestName);
 
-            NoBruteRequestCheck check = service.CheckRequest(this.requestName);
-
-            if (check != null && !check.IsGreenRequest)
+            if (check?.IsGreenRequest == false)
             {
                 System.Threading.Thread.Sleep(check.AppendRequestTime);
             }
         }
 
         /// <summary>
+        /// Executes asynchronously before and after the action.
         /// </summary>
         /// <param name="context"></param>
         /// <param name="next"></param>
-        /// <inheritdoc />
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            INoBrute service = (INoBrute)context.HttpContext.RequestServices.GetService(typeof(INoBrute));
+            var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
+            var check = service?.CheckRequest(requestName);
 
-            NoBruteRequestCheck check = service.CheckRequest(this.requestName);
-
-            if (check != null && !check.IsGreenRequest)
+            if (check?.IsGreenRequest == false)
             {
                 System.Threading.Thread.Sleep(check.AppendRequestTime);
             }
 
             await next();
 
-            if (this.autoProcess)
+            if (autoProcess)
             {
-                service.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, this.requestName);
+                service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
             }
         }
 
-        #endregion Before Request
-
-        #region AfterRequest
-
+        /// <summary>
+        /// Executes after the action.
+        /// </summary>
+        /// <param name="context"></param>
         public override void OnActionExecuted(ActionExecutedContext context)
         {
-            if (this.autoProcess)
+            if (autoProcess)
             {
-                INoBrute service = (INoBrute)context.HttpContext.RequestServices.GetService(typeof(INoBrute));
-
-                service.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, this.requestName);
+                var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
+                service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
             }
         }
-
-        #endregion AfterRequest
     }
 }

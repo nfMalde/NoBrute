@@ -1,9 +1,9 @@
 ﻿using Moq;
-using NoBrute.Domain;
-using NUnit.Framework;
+using NoBrute.Domain; 
 using Shouldly;
 using System;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace NoBruteTesting
 {
@@ -16,7 +16,7 @@ namespace NoBruteTesting
         /// <summary>
         /// It should increase request time if no green request.
         /// </summary>
-        [Test]
+        [Fact]
         public void ItShouldIncreaseRequestTimeIfNoGreenRequest()
         {
             NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST");
@@ -34,7 +34,7 @@ namespace NoBruteTesting
         /// <summary>
         /// It should increase request time if no green request in asynchronous mode.
         /// </summary>
-        [Test]
+        [Fact]
         public async Task ItShouldIncreaseRequestTimeIfNoGreenRequestAsync()
         {
             NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST");
@@ -55,7 +55,8 @@ namespace NoBruteTesting
         /// </summary>
         /// <param name="expectedStatusCode">The expected status code.</param>
         /// <param name="expectedAutoclear">if set to <c>true</c> [expected autoclear].</param>
-        [TestCase(200, true)]
+        [Theory]
+        [InlineData(200, true)]
         public void ItShouldHandleAutoClearForCorrectStatusCode(int expectedStatusCode, bool expectedAutoclear)
         {
             int increaseMS = 1000;
