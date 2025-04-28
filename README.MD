@@ -1,4 +1,4 @@
-![Nuget](https://img.shields.io/nuget/v/NoBrute?style=flat-square)](https://www.nuget.org/packages/NoBrute/)  
+[![Nuget](https://img.shields.io/nuget/v/NoBrute?style=flat-square)](https://www.nuget.org/packages/NoBrute/)
 [![Downloads](https://img.shields.io/nuget/dt/NoBrute)](https://www.nuget.org/packages/NoBrute/)  
 [![Paypal Donate](https://img.shields.io/badge/donate-paypal-blue)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL)  
 [![Pull Request Check](https://img.shields.io/github/actions/workflow/status/nfMalde/NoBrute/pr.yml)](https://github.com/nfMalde/NoBrute/actions/workflows/pr.yml)
