@@ -1,7 +1,7 @@
 using Moq;
 using NoBrute.Domain;
 using Shouldly;
-using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -20,16 +20,15 @@ namespace NoBruteTesting
         public void ItShouldIncreaseRequestTimeIfNoGreenRequest()
         {
             NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
-            int increaseMS = 1000;
-            // Save Time
-            double ms = DateTime.Now.TimeOfDay.TotalMilliseconds;
+            const int increaseMS = 60;
+            const int timingToleranceMS = 10;
+            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
             filter.OnPageHandlerExecuting(this.GetPageHandlerExecutingContextMock());
 
-            double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
-
-            (ms2 - ms).ShouldBeGreaterThanOrEqualTo(increaseMS); // We expect that the request was delayed by 1000ms
+            stopwatch.Stop();
+            stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
 
         /// <summary>
@@ -39,16 +38,15 @@ namespace NoBruteTesting
         public async Task ItShouldIncreaseRequestTimeIfNoGreenRequestAsync()
         {
             NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
-            int increaseMS = 1000;
-            // Save Time
-            double ms = DateTime.Now.TimeOfDay.TotalMilliseconds;
+            const int increaseMS = 60;
+            const int timingToleranceMS = 10;
+            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
             await filter.OnPageHandlerExecutionAsync(this.GetPageHandlerExecutingContextMock(), this.GetPageHandlerExecutionDelegate());
 
-            double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
-
-            (ms2 - ms).ShouldBeGreaterThanOrEqualTo(increaseMS); // We expect that the request was delayed by 1000ms
+            stopwatch.Stop();
+            stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
 
         /// <summary>
