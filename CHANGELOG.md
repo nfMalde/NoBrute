@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [2.2.0]
+### Added
+- Added Minimal API support via `NoBruteEndpointFilter` and `WithNoBrute()` endpoint extension
+- Added Razor Pages support via `NoBrutePageFilter`
+
+### Changed
+- Updated to .NET 10.0
+- Replaced individual NuGet package references with `FrameworkReference` to `Microsoft.AspNetCore.App`
+- Removed unnecessary dependencies (`System.Text.RegularExpressions`, legacy ASP.NET Core 2.x packages)
+
 ## [2.1.0]
 ## Changed
 - Updated to .NET 9.0
