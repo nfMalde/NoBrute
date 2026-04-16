@@ -1,8 +1,8 @@
 [![Nuget](https://img.shields.io/nuget/v/NoBrute?style=flat-square)](https://www.nuget.org/packages/NoBrute/) [![Downloads](https://img.shields.io/nuget/dt/NoBrute)](https://www.nuget.org/packages/NoBrute/) [![Paypal Donate](https://img.shields.io/badge/donate-paypal-blue)](https://www.paypal.com/donate/?hosted_button_id=SVZHLRTQ6H4VL) [![Pull Request Check](https://img.shields.io/github/actions/workflow/status/nfMalde/NoBrute/pr.yml)](https://github.com/nfMalde/NoBrute/actions/workflows/pr.yml)
 
 # NoBrute (by Malte)  
-Simple and lightweight brute-force protection for .NET 8.  
-This library will protect defined actions in your controllers by making them inefficient to brute-force.  
+Simple and lightweight brute-force protection for .NET 10.  
+This library will protect defined actions in your MVC controllers, Minimal API endpoints, and Razor Pages by making them inefficient to brute-force.  
 It will append request times in milliseconds if a local cache entry on the server is found for the same request & request name & method, and the hit count reaches a defined limit (referred to here as "green requests") within a specific time frame.
 
 ## Requirements  
@@ -25,7 +25,7 @@ dotnet add package NoBrute
 
 Enable it in your application:  
 ```csharp
-// Startup.cs
+// Startup.cs / Program.cs
 
 public IServiceProvider ConfigureServices(IServiceCollection services) {
      
@@ -37,7 +37,15 @@ public IServiceProvider ConfigureServices(IServiceCollection services) {
         x.Configuration = "... ";
     }); // In this case, we used Redis as an example
 
+    // MVC only (default):
     services.AddNoBrute();
+
+    // Or configure which filters to register:
+    services.AddNoBrute(options =>
+    {
+        options.UseMvc = true;         // Register MVC action filter (default: true)
+        options.UseRazorPages = true;  // Register Razor Pages filter (default: false)
+    });
 }
 ```
 
@@ -113,6 +121,55 @@ public IHttpActionResult Login() {
 public IHttpActionResult Login() {
     ...
 }
+```
+
+### The Endpoint Filter (Minimal API)  
+To protect a Minimal API endpoint, use the `WithNoBrute()` extension method on the route handler builder.
+
+#### Arguments:  
+| Name                  | Description                                                                 |
+|-----------------------|-----------------------------------------------------------------------------|
+| string requestName    | Assigns a fixed name to the incoming request for better identification. If null, empty, or not given, NoBrute will use the `RequestPath` as the name. |
+| bool autoProcess      | Indicates that the requests should be released/cleared when the configured HTTP status code is returned. (Default: true) |
+
+#### Examples  
+**Generated Name with Auto Release**  
+```csharp
+app.MapPost("/login", (LoginRequest req) => {
+    ...
+}).WithNoBrute();
+```
+
+**Fixed Name**  
+```csharp
+app.MapPost("/login", (LoginRequest req) => {
+    ...
+}).WithNoBrute("LoginEndpoint");
+```
+
+**Fixed Name with Auto Release disabled**  
+```csharp
+app.MapPost("/login", (LoginRequest req) => {
+    ...
+}).WithNoBrute("LoginEndpoint", false);
+```
+
+### The Page Filter (Razor Pages)  
+To protect a Razor Page, use the `NoBrutePageFilter`. You can register it globally or apply it to individual pages.
+
+#### Arguments:  
+| Name                  | Description                                                                 |
+|-----------------------|-----------------------------------------------------------------------------|
+| string requestName    | Assigns a fixed name to the incoming request for better identification. If null, empty, or not given, NoBrute will use the `RequestPath` as the name. |
+| bool autoProcess      | Indicates that the requests should be released/cleared when the configured HTTP status code is returned. (Default: true) |
+
+#### Examples  
+**Register globally for all pages**  
+```csharp
+builder.Services.AddRazorPages(options =>
+{
+    options.Filters.Add(new NoBrutePageFilter("GlobalPages", true));
+});
 ```
 
 ### The Service  

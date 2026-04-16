@@ -1,5 +1,5 @@
-﻿using Moq;
-using NoBrute.Domain; 
+using Moq;
+using NoBrute.Domain;
 using Shouldly;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -8,10 +8,10 @@ using Xunit;
 namespace NoBruteTesting
 {
     /// <summary>
-    /// Tests for the NoBrute Filter Attribute
+    /// Tests for the NoBrute Page Filter (Razor Pages)
     /// </summary>
-    /// <seealso cref="NoBruteTesting.Abstracts.NoBruteAttributeTestCasesAbstract" />
-    public class NoBruteAttributeTests : Abstracts.NoBruteAttributeTestCasesAbstract
+    /// <seealso cref="NoBruteTesting.Abstracts.NoBrutePageFilterTestCasesAbstract" />
+    public class NoBrutePageFilterTests : Abstracts.NoBrutePageFilterTestCasesAbstract
     {
         /// <summary>
         /// It should increase request time if no green request.
@@ -19,15 +19,15 @@ namespace NoBruteTesting
         [Fact]
         public void ItShouldIncreaseRequestTimeIfNoGreenRequest()
         {
-            NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST");
-            int increaseMS = 50;
+            NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
+            const int increaseMS = 60;
+            const int timingToleranceMS = 10;
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
-            Stopwatch sw = Stopwatch.StartNew();
-            attribute.OnActionExecuting(this.GetActionExecutingContextMock());
-            sw.Stop();
-
-            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            filter.OnPageHandlerExecuting(this.GetPageHandlerExecutingContextMock());
+            stopwatch.Stop();
+            stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
 
         /// <summary>
@@ -36,15 +36,15 @@ namespace NoBruteTesting
         [Fact]
         public async Task ItShouldIncreaseRequestTimeIfNoGreenRequestAsync()
         {
-            NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST");
-            int increaseMS = 50;
+            NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
+            const int increaseMS = 60;
+            const int timingToleranceMS = 10;
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
-            Stopwatch sw = Stopwatch.StartNew();
-            await attribute.OnActionExecutionAsync(this.GetActionExecutingContextMock(), this.GetActionExecutionDelegate());
-            sw.Stop();
-
-            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            await filter.OnPageHandlerExecutionAsync(this.GetPageHandlerExecutingContextMock(), this.GetPageHandlerExecutionDelegate());
+            stopwatch.Stop();
+            stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
 
         /// <summary>
@@ -59,10 +59,10 @@ namespace NoBruteTesting
             int increaseMS = 50;
             Mock<INoBrute> mock = this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
-            NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST", true);
-            attribute.OnActionExecuting(this.GetActionExecutingContextMock());
+            NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST", true);
+            filter.OnPageHandlerExecuting(this.GetPageHandlerExecutingContextMock());
 
-            attribute.OnActionExecuted(this.GetActionExecutedContextMock(expectedStatusCode));
+            filter.OnPageHandlerExecuted(this.GetPageHandlerExecutedContextMock(expectedStatusCode));
 
             if (expectedAutoclear)
             {
