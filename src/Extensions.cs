@@ -20,6 +20,11 @@
         /// <param name="configure">Action to configure registration options.</param>
         public static void AddNoBrute(this IServiceCollection services, Action<NoBrute.Models.NoBruteRegistrationOptions> configure)
         {
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
             var options = new NoBrute.Models.NoBruteRegistrationOptions();
             configure(options);
 

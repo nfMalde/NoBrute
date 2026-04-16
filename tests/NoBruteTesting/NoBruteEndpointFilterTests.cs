@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Moq;
 using NoBrute.Domain;
 using Shouldly;
@@ -22,13 +23,10 @@ namespace NoBruteTesting
             NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("FALSY_REQUEST");
             const int increaseMS = 60;
             const int timingToleranceMS = 10;
-            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
-            Stopwatch sw = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
             await filter.InvokeAsync(this.GetEndpointFilterInvocationContext(), this.GetEndpointFilterDelegate());
-            sw.Stop();
-
             stopwatch.Stop();
             stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
@@ -65,7 +63,43 @@ namespace NoBruteTesting
                         It.IsAny<int>(),
                         It.IsAny<string>()),
                     Times.Never()
-                    );
+                );
+            }
+        }
+
+        [Fact]
+        public async Task ItShouldHandleAutoClearForIResultExecutedAfterFilter()
+        {
+            const int increaseMS = 50;
+            Mock<INoBrute> mock = this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
+            var context = this.GetEndpointFilterInvocationContext();
+            NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("FALSY_REQUEST", true);
+
+            var wrappedResult = await filter.InvokeAsync(
+                context,
+                _ => new ValueTask<object>(new DeferredStatusResult(StatusCodes.Status429TooManyRequests)));
+
+            wrappedResult.ShouldBeAssignableTo<IResult>();
+            await ((IResult)wrappedResult).ExecuteAsync(context.HttpContext);
+
+            mock.Verify(x =>
+                x.AutoProcessRequestRelease(StatusCodes.Status429TooManyRequests, "FALSY_REQUEST"),
+                Times.Once());
+        }
+
+        private sealed class DeferredStatusResult : IResult
+        {
+            private readonly int statusCode;
+
+            public DeferredStatusResult(int statusCode)
+            {
+                this.statusCode = statusCode;
+            }
+
+            public Task ExecuteAsync(HttpContext httpContext)
+            {
+                httpContext.Response.StatusCode = this.statusCode;
+                return Task.CompletedTask;
             }
         }
     }

@@ -41,12 +41,50 @@ namespace NoBrute
 
             var result = await next(context);
 
-            if (autoProcess)
+            if (!autoProcess)
             {
-                service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
+                return result;
             }
 
+            var statusCode = TryGetStatusCode(result);
+            if (statusCode.HasValue)
+            {
+                service?.AutoProcessRequestRelease(statusCode.Value, requestName);
+                return result;
+            }
+
+            if (result is IResult httpResult)
+            {
+                return new AutoProcessingResult(httpResult, service, requestName);
+            }
+
+            service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
             return result;
+        }
+
+        private static int? TryGetStatusCode(object result)
+        {
+            return (result as IStatusCodeHttpResult)?.StatusCode;
+        }
+
+        private sealed class AutoProcessingResult : IResult
+        {
+            private readonly IResult innerResult;
+            private readonly INoBrute service;
+            private readonly string requestName;
+
+            public AutoProcessingResult(IResult innerResult, INoBrute service, string requestName)
+            {
+                this.innerResult = innerResult;
+                this.service = service;
+                this.requestName = requestName;
+            }
+
+            public async Task ExecuteAsync(HttpContext httpContext)
+            {
+                await this.innerResult.ExecuteAsync(httpContext);
+                this.service?.AutoProcessRequestRelease(httpContext.Response.StatusCode, this.requestName);
+            }
         }
     }
 }

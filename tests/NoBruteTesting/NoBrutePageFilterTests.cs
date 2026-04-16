@@ -22,13 +22,10 @@ namespace NoBruteTesting
             NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
             const int increaseMS = 60;
             const int timingToleranceMS = 10;
-            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
-            Stopwatch sw = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
             filter.OnPageHandlerExecuting(this.GetPageHandlerExecutingContextMock());
-            sw.Stop();
-
             stopwatch.Stop();
             stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
@@ -42,13 +39,10 @@ namespace NoBruteTesting
             NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
             const int increaseMS = 60;
             const int timingToleranceMS = 10;
-            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
-            Stopwatch sw = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
             await filter.OnPageHandlerExecutionAsync(this.GetPageHandlerExecutingContextMock(), this.GetPageHandlerExecutionDelegate());
-            sw.Stop();
-
             stopwatch.Stop();
             stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
