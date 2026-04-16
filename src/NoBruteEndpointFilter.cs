@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using NoBrute.Domain;
+using System;
 using System.Threading.Tasks;
 
 namespace NoBrute
@@ -75,7 +76,7 @@ namespace NoBrute
 
             public AutoProcessingResult(IResult innerResult, INoBrute service, string requestName)
             {
-                this.innerResult = innerResult;
+                this.innerResult = innerResult ?? throw new ArgumentNullException(nameof(innerResult));
                 this.service = service;
                 this.requestName = requestName;
             }
