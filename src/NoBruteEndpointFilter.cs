@@ -36,7 +36,7 @@ namespace NoBrute
 
             if (check?.IsGreenRequest == false)
             {
-                System.Threading.Thread.Sleep(check.AppendRequestTime);
+                await Task.Delay(check.AppendRequestTime, context.HttpContext.RequestAborted);
             }
 
             var result = await next(context);
