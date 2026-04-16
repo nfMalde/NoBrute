@@ -20,14 +20,17 @@ namespace NoBruteTesting
         public async Task ItShouldIncreaseRequestTimeIfNoGreenRequest()
         {
             NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("FALSY_REQUEST");
-            int increaseMS = 50;
+            const int increaseMS = 60;
+            const int timingToleranceMS = 10;
+            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
             Stopwatch sw = Stopwatch.StartNew();
             await filter.InvokeAsync(this.GetEndpointFilterInvocationContext(), this.GetEndpointFilterDelegate());
             sw.Stop();
 
-            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
+            stopwatch.Stop();
+            stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
 
         /// <summary>

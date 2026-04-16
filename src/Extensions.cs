@@ -52,7 +52,8 @@ namespace Microsoft.AspNetCore.Builder
         /// <param name="autoProcess">if set to <c>true</c>, automatically releases the request on configured status codes.</param>
         public static RouteHandlerBuilder WithNoBrute(this RouteHandlerBuilder builder, string requestName = null, bool autoProcess = true)
         {
-            var filter = new NoBrute.NoBruteEndpointFilter(string.IsNullOrWhiteSpace(requestName) ? null : requestName, autoProcess);
+            var normalizedRequestName = string.IsNullOrWhiteSpace(requestName) ? null : requestName;
+            var filter = new NoBrute.NoBruteEndpointFilter(normalizedRequestName, autoProcess);
             return builder.AddEndpointFilter((context, next) => filter.InvokeAsync(context, next));
         }
     }

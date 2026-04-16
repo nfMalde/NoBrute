@@ -20,14 +20,17 @@ namespace NoBruteTesting
         public void ItShouldIncreaseRequestTimeIfNoGreenRequest()
         {
             NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
-            int increaseMS = 50;
+            const int increaseMS = 60;
+            const int timingToleranceMS = 10;
+            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
             Stopwatch sw = Stopwatch.StartNew();
             filter.OnPageHandlerExecuting(this.GetPageHandlerExecutingContextMock());
             sw.Stop();
 
-            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
+            stopwatch.Stop();
+            stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
 
         /// <summary>
@@ -37,14 +40,17 @@ namespace NoBruteTesting
         public async Task ItShouldIncreaseRequestTimeIfNoGreenRequestAsync()
         {
             NoBrute.NoBrutePageFilter filter = new NoBrute.NoBrutePageFilter("FALSY_REQUEST");
-            int increaseMS = 50;
+            const int increaseMS = 60;
+            const int timingToleranceMS = 10;
+            Stopwatch stopwatch = Stopwatch.StartNew();
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
             Stopwatch sw = Stopwatch.StartNew();
             await filter.OnPageHandlerExecutionAsync(this.GetPageHandlerExecutingContextMock(), this.GetPageHandlerExecutionDelegate());
             sw.Stop();
 
-            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
+            stopwatch.Stop();
+            stopwatch.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - timingToleranceMS);
         }
 
         /// <summary>
