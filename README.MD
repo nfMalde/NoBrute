@@ -25,7 +25,7 @@ dotnet add package NoBrute
 
 Enable it in your application:  
 ```csharp
-// Startup.cs
+// Startup.cs / Program.cs
 
 public IServiceProvider ConfigureServices(IServiceCollection services) {
      
@@ -37,7 +37,15 @@ public IServiceProvider ConfigureServices(IServiceCollection services) {
         x.Configuration = "... ";
     }); // In this case, we used Redis as an example
 
+    // MVC only (default):
     services.AddNoBrute();
+
+    // Or configure which filters to register:
+    services.AddNoBrute(options =>
+    {
+        options.UseMvc = true;         // Register MVC action filter (default: true)
+        options.UseRazorPages = true;  // Register Razor Pages filter (default: false)
+    });
 }
 ```
 

@@ -21,7 +21,7 @@ namespace NoBrute
         /// <param name="autoProcess">if set to <c>true</c> [automatic process].</param>
         public NoBrutePageFilter(string requestName = null, bool autoProcess = true)
         {
-            this.requestName = requestName;
+            this.requestName = string.IsNullOrWhiteSpace(requestName) ? null : requestName;
             this.autoProcess = autoProcess;
         }
 
@@ -42,7 +42,7 @@ namespace NoBrute
 
             if (check?.IsGreenRequest == false)
             {
-                System.Threading.Thread.Sleep(check.AppendRequestTime);
+                Task.Delay(check.AppendRequestTime, context.HttpContext.RequestAborted).GetAwaiter().GetResult();
             }
         }
 
@@ -77,7 +77,7 @@ namespace NoBrute
 
             if (check?.IsGreenRequest == false)
             {
-                System.Threading.Thread.Sleep(check.AppendRequestTime);
+                await Task.Delay(check.AppendRequestTime, context.HttpContext.RequestAborted);
             }
 
             await next();

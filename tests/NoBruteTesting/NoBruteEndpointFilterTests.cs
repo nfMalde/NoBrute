@@ -1,7 +1,7 @@
 using Moq;
 using NoBrute.Domain;
 using Shouldly;
-using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -20,16 +20,14 @@ namespace NoBruteTesting
         public async Task ItShouldIncreaseRequestTimeIfNoGreenRequest()
         {
             NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("FALSY_REQUEST");
-            int increaseMS = 1000;
-            // Save Time
-            double ms = DateTime.Now.TimeOfDay.TotalMilliseconds;
+            int increaseMS = 50;
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
+            Stopwatch sw = Stopwatch.StartNew();
             await filter.InvokeAsync(this.GetEndpointFilterInvocationContext(), this.GetEndpointFilterDelegate());
+            sw.Stop();
 
-            double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
-
-            (ms2 - ms).ShouldBeGreaterThanOrEqualTo(increaseMS); // We expect that the request was delayed by 1000ms
+            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
         }
 
         /// <summary>
@@ -41,7 +39,7 @@ namespace NoBruteTesting
         [InlineData(200, true)]
         public async Task ItShouldHandleAutoClearForCorrectStatusCode(int expectedStatusCode, bool expectedAutoclear)
         {
-            int increaseMS = 1000;
+            int increaseMS = 50;
             Mock<INoBrute> mock = this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
             NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("FALSY_REQUEST", true);

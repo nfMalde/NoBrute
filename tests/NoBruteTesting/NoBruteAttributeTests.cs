@@ -1,7 +1,7 @@
 ﻿using Moq;
 using NoBrute.Domain; 
 using Shouldly;
-using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -20,15 +20,14 @@ namespace NoBruteTesting
         public void ItShouldIncreaseRequestTimeIfNoGreenRequest()
         {
             NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST");
-            int increaseMS = 1000;
-            // Save Time
-            double ms = DateTime.Now.TimeOfDay.TotalMilliseconds;
+            int increaseMS = 50;
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
+
+            Stopwatch sw = Stopwatch.StartNew();
             attribute.OnActionExecuting(this.GetActionExecutingContextMock());
+            sw.Stop();
 
-            double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
-
-            (ms2 - ms).ShouldBeGreaterThanOrEqualTo(increaseMS); // We expect that that the request was delayed by 1000ms
+            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
         }
 
         /// <summary>
@@ -38,16 +37,14 @@ namespace NoBruteTesting
         public async Task ItShouldIncreaseRequestTimeIfNoGreenRequestAsync()
         {
             NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST");
-            int increaseMS = 1000;
-            // Save Time
-            double ms = DateTime.Now.TimeOfDay.TotalMilliseconds;
+            int increaseMS = 50;
             this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
+            Stopwatch sw = Stopwatch.StartNew();
             await attribute.OnActionExecutionAsync(this.GetActionExecutingContextMock(), this.GetActionExecutionDelegate());
+            sw.Stop();
 
-            double ms2 = DateTime.Now.TimeOfDay.TotalMilliseconds;
-
-            (ms2 - ms).ShouldBeGreaterThanOrEqualTo(increaseMS); // We expect that that the request was delayed by 1000ms
+            sw.ElapsedMilliseconds.ShouldBeGreaterThanOrEqualTo(increaseMS - 5); // small tolerance for timer resolution
         }
 
         /// <summary>
@@ -59,7 +56,7 @@ namespace NoBruteTesting
         [InlineData(200, true)]
         public void ItShouldHandleAutoClearForCorrectStatusCode(int expectedStatusCode, bool expectedAutoclear)
         {
-            int increaseMS = 1000;
+            int increaseMS = 50;
             Mock<INoBrute> mock = this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
 
             NoBrute.NoBruteAttribute attribute = new NoBrute.NoBruteAttribute("FALSY_REQUEST", true);
