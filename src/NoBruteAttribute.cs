@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using NoBrute.Domain;
 using NoBrute.Models;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NoBrute
@@ -9,6 +11,11 @@ namespace NoBrute
     /// NoBruteAttribute
     /// Protects the given Action against brute force attacks
     /// </summary>
+    /// <remarks>
+    /// The whole work happens in <see cref="OnActionExecutionAsync"/>. MVC always prefers the
+    /// asynchronous filter interface when a filter implements both, so the request is delayed with
+    /// <c>await Task.Delay(...)</c> and never blocks a thread pool thread.
+    /// </remarks>
     public class NoBruteAttribute : ActionFilterAttribute
     {
         private readonly string requestName;
@@ -26,21 +33,6 @@ namespace NoBrute
         }
 
         /// <summary>
-        /// Executes before the action.
-        /// </summary>
-        /// <param name="context"></param>
-        public override void OnActionExecuting(ActionExecutingContext context)
-        {
-            var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
-            var check = service?.CheckRequest(requestName);
-
-            if (check?.IsGreenRequest == false)
-            {
-                System.Threading.Thread.Sleep(check.AppendRequestTime);
-            }
-        }
-
-        /// <summary>
         /// Executes asynchronously before and after the action.
         /// </summary>
         /// <param name="context"></param>
@@ -48,31 +40,28 @@ namespace NoBrute
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
-            var check = service?.CheckRequest(requestName);
+            CancellationToken cancellationToken = context.HttpContext.RequestAborted;
 
-            if (check?.IsGreenRequest == false)
+            NoBruteRequestCheck check = service == null
+                ? null
+                : await service.CheckRequestAsync(requestName, cancellationToken);
+
+            if (check != null && check.IsBlocked)
             {
-                System.Threading.Thread.Sleep(check.AppendRequestTime);
+                context.Result = new StatusCodeResult(check.BlockedStatusCode);
+                return;
+            }
+
+            if (check?.IsGreenRequest == false && check.AppendRequestTime > 0)
+            {
+                await Task.Delay(check.AppendRequestTime, cancellationToken);
             }
 
             await next();
 
-            if (autoProcess)
+            if (autoProcess && service != null)
             {
-                service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
-            }
-        }
-
-        /// <summary>
-        /// Executes after the action.
-        /// </summary>
-        /// <param name="context"></param>
-        public override void OnActionExecuted(ActionExecutedContext context)
-        {
-            if (autoProcess)
-            {
-                var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
-                service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
+                await service.AutoProcessRequestReleaseAsync(context.HttpContext.Response.StatusCode, requestName);
             }
         }
     }

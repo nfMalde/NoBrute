@@ -3,6 +3,7 @@ using Moq;
 using NoBrute.Domain;
 using Shouldly;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -52,16 +53,17 @@ namespace NoBruteTesting
             if (expectedAutoclear)
             {
                 mock.Verify(x =>
-                x.AutoProcessRequestRelease(expectedStatusCode, "FALSY_REQUEST"),
+                x.AutoProcessRequestReleaseAsync(expectedStatusCode, "FALSY_REQUEST", It.IsAny<CancellationToken>()),
                 Times.Once()
                 );
             }
             else
             {
                 mock.Verify(
-                    x => x.AutoProcessRequestRelease(
+                    x => x.AutoProcessRequestReleaseAsync(
                         It.IsAny<int>(),
-                        It.IsAny<string>()),
+                        It.IsAny<string>(),
+                        It.IsAny<CancellationToken>()),
                     Times.Never()
                 );
             }
@@ -83,8 +85,66 @@ namespace NoBruteTesting
             await ((IResult)wrappedResult).ExecuteAsync(context.HttpContext);
 
             mock.Verify(x =>
-                x.AutoProcessRequestRelease(StatusCodes.Status429TooManyRequests, "FALSY_REQUEST"),
+                x.AutoProcessRequestReleaseAsync(StatusCodes.Status429TooManyRequests, "FALSY_REQUEST", It.IsAny<CancellationToken>()),
                 Times.Once());
+        }
+
+        /// <summary>
+        /// It should delay without blocking the calling thread, so the thread pool stays available under load.
+        /// </summary>
+        [Fact]
+        public async Task ItShouldNotBlockTheCallingThreadWhileDelaying()
+        {
+            NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("FALSY_REQUEST");
+            const int increaseMS = 300;
+            this.RegisterNoBruteServiceMock(false, increaseMS, "127.0.1");
+
+            ValueTask<object> filterTask = filter.InvokeAsync(this.GetEndpointFilterInvocationContext(), this.GetEndpointFilterDelegate());
+
+            filterTask.IsCompleted.ShouldBeFalse();
+
+            await filterTask;
+        }
+
+        /// <summary>
+        /// It should let the request pass when NoBrute is not registered at all.
+        /// </summary>
+        [Fact]
+        public async Task ItShouldPassThroughWithoutTheService()
+        {
+            NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("ANY_REQUEST");
+            bool nextWasCalled = false;
+
+            await filter.InvokeAsync(this.GetEndpointFilterInvocationContext(), _ =>
+            {
+                nextWasCalled = true;
+                return new ValueTask<object>(new object());
+            });
+
+            nextWasCalled.ShouldBeTrue();
+        }
+
+        /// <summary>
+        /// It should short circuit with the blocked status code once the tracked entry limit is reached.
+        /// </summary>
+        [Fact]
+        public async Task ItShouldHardBlockWhenEntryLimitIsReached()
+        {
+            const int blockedStatusCode = 429;
+            this.RegisterNoBruteServiceMock(false, 5000, "127.0.1", blocked: true, blockedStatusCode: blockedStatusCode);
+
+            NoBrute.NoBruteEndpointFilter filter = new NoBrute.NoBruteEndpointFilter("FALSY_REQUEST");
+            EndpointFilterInvocationContext context = this.GetEndpointFilterInvocationContext();
+            bool nextWasCalled = false;
+
+            object result = await filter.InvokeAsync(context, _ =>
+            {
+                nextWasCalled = true;
+                return new ValueTask<object>(new object());
+            });
+
+            nextWasCalled.ShouldBeFalse();
+            result.ShouldBeAssignableTo<IStatusCodeHttpResult>().StatusCode.ShouldBe(blockedStatusCode);
         }
 
         private sealed class DeferredStatusResult : IResult

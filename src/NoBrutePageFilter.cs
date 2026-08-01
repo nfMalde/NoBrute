@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using NoBrute.Domain;
+using NoBrute.Models;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NoBrute
@@ -9,6 +11,11 @@ namespace NoBrute
     /// NoBrutePageFilter
     /// Protects Razor Pages against brute force attacks
     /// </summary>
+    /// <remarks>
+    /// Only the asynchronous filter interface carries logic. Razor Pages always prefers
+    /// <see cref="IAsyncPageFilter"/> over <see cref="IPageFilter"/>, so the request is delayed with
+    /// <c>await Task.Delay(...)</c> and never blocks a thread pool thread.
+    /// </remarks>
     public class NoBrutePageFilter : IPageFilter, IAsyncPageFilter
     {
         private readonly string requestName;
@@ -32,32 +39,16 @@ namespace NoBrute
         public void OnPageHandlerSelected(PageHandlerSelectedContext context) { }
 
         /// <summary>
-        /// Called before the handler method executes.
+        /// Not used. See <see cref="OnPageHandlerExecutionAsync"/>.
         /// </summary>
         /// <param name="context">The context.</param>
-        public void OnPageHandlerExecuting(PageHandlerExecutingContext context)
-        {
-            var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
-            var check = service?.CheckRequest(requestName);
-
-            if (check?.IsGreenRequest == false)
-            {
-                Task.Delay(check.AppendRequestTime, context.HttpContext.RequestAborted).GetAwaiter().GetResult();
-            }
-        }
+        public void OnPageHandlerExecuting(PageHandlerExecutingContext context) { }
 
         /// <summary>
-        /// Called after the handler method executes.
+        /// Not used. See <see cref="OnPageHandlerExecutionAsync"/>.
         /// </summary>
         /// <param name="context">The context.</param>
-        public void OnPageHandlerExecuted(PageHandlerExecutedContext context)
-        {
-            if (autoProcess)
-            {
-                var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
-                service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
-            }
-        }
+        public void OnPageHandlerExecuted(PageHandlerExecutedContext context) { }
 
         /// <summary>
         /// Called asynchronously when a handler is selected, before model binding.
@@ -73,18 +64,28 @@ namespace NoBrute
         public async Task OnPageHandlerExecutionAsync(PageHandlerExecutingContext context, PageHandlerExecutionDelegate next)
         {
             var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
-            var check = service?.CheckRequest(requestName);
+            CancellationToken cancellationToken = context.HttpContext.RequestAborted;
 
-            if (check?.IsGreenRequest == false)
+            NoBruteRequestCheck check = service == null
+                ? null
+                : await service.CheckRequestAsync(requestName, cancellationToken);
+
+            if (check != null && check.IsBlocked)
             {
-                await Task.Delay(check.AppendRequestTime, context.HttpContext.RequestAborted);
+                context.Result = new StatusCodeResult(check.BlockedStatusCode);
+                return;
+            }
+
+            if (check?.IsGreenRequest == false && check.AppendRequestTime > 0)
+            {
+                await Task.Delay(check.AppendRequestTime, cancellationToken);
             }
 
             await next();
 
-            if (autoProcess)
+            if (autoProcess && service != null)
             {
-                service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
+                await service.AutoProcessRequestReleaseAsync(context.HttpContext.Response.StatusCode, requestName);
             }
         }
     }

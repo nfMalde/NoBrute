@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/nfMalde/NoBrute</PackageProjectUrl>
     <RepositoryUrl>https://github.com/nfMalde/NoBrute</RepositoryUrl>
@@ -25,11 +25,12 @@
 
     <PackageReleaseNotes>
 		  <![CDATA[
-      * Updated to .NET 10.0
-      * Added Minimal API support via NoBruteEndpointFilter and WithNoBrute() extension
-      * Added Razor Pages support via NoBrutePageFilter
-      * Replaced individual NuGet packages with FrameworkReference
-      * Removed unnecessary dependencies
+      * Fully asynchronous request pipeline: no Thread.Sleep and no blocking cache calls anymore, so bot waves can no longer starve the thread pool
+      * Added CheckRequestAsync / ReleaseRequestAsync / AutoProcessRequestReleaseAsync (existing custom INoBrute implementations keep working)
+      * Added support for reverse proxies (Cloudflare, load balancers) via CF-Connecting-IP / X-Forwarded-For with trusted proxies and networks
+      * Added a global circuit breaker (MaxTrackedEntries) that hard blocks new clients instead of flooding the cache
+      * Cache entries now expire after TimeUntilReset instead of living forever
+      * Added MaxIncreaseRequestTime to cap the delay of a single request
 	  ]]></PackageReleaseNotes>
   </PropertyGroup>
 

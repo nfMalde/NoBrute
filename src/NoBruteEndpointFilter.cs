@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using NoBrute.Domain;
+using NoBrute.Models;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NoBrute
@@ -33,11 +35,20 @@ namespace NoBrute
         public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
         {
             var service = context.HttpContext.RequestServices.GetService(typeof(INoBrute)) as INoBrute;
-            var check = service?.CheckRequest(requestName);
+            CancellationToken cancellationToken = context.HttpContext.RequestAborted;
 
-            if (check?.IsGreenRequest == false)
+            NoBruteRequestCheck check = service == null
+                ? null
+                : await service.CheckRequestAsync(requestName, cancellationToken);
+
+            if (check != null && check.IsBlocked)
             {
-                await Task.Delay(check.AppendRequestTime, context.HttpContext.RequestAborted);
+                return Results.StatusCode(check.BlockedStatusCode);
+            }
+
+            if (check?.IsGreenRequest == false && check.AppendRequestTime > 0)
+            {
+                await Task.Delay(check.AppendRequestTime, cancellationToken);
             }
 
             var result = await next(context);
@@ -50,7 +61,7 @@ namespace NoBrute
             var statusCode = TryGetStatusCode(result);
             if (statusCode.HasValue)
             {
-                service?.AutoProcessRequestRelease(statusCode.Value, requestName);
+                await ReleaseAsync(service, statusCode.Value);
                 return result;
             }
 
@@ -59,8 +70,15 @@ namespace NoBrute
                 return new AutoProcessingResult(httpResult, service, requestName);
             }
 
-            service?.AutoProcessRequestRelease(context.HttpContext.Response.StatusCode, requestName);
+            await ReleaseAsync(service, context.HttpContext.Response.StatusCode);
             return result;
+        }
+
+        private Task ReleaseAsync(INoBrute service, int statusCode)
+        {
+            return service == null
+                ? Task.CompletedTask
+                : service.AutoProcessRequestReleaseAsync(statusCode, requestName);
         }
 
         private static int? TryGetStatusCode(object result)
@@ -84,7 +102,11 @@ namespace NoBrute
             public async Task ExecuteAsync(HttpContext httpContext)
             {
                 await this.innerResult.ExecuteAsync(httpContext);
-                this.service?.AutoProcessRequestRelease(httpContext.Response.StatusCode, this.requestName);
+
+                if (this.service != null)
+                {
+                    await this.service.AutoProcessRequestReleaseAsync(httpContext.Response.StatusCode, this.requestName);
+                }
             }
         }
     }

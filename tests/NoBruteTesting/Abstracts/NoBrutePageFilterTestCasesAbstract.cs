@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NoBrute.Domain;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NoBruteTesting.Abstracts
@@ -54,7 +55,7 @@ namespace NoBruteTesting.Abstracts
         /// <param name="increaseTime">The increase time.</param>
         /// <param name="ip">The ip.</param>
         /// <returns></returns>
-        protected Mock<INoBrute> RegisterNoBruteServiceMock(bool greenRequest, int increaseTime, string ip)
+        protected Mock<INoBrute> RegisterNoBruteServiceMock(bool greenRequest, int increaseTime, string ip, bool blocked = false, int blockedStatusCode = 429)
         {
             Mock<INoBrute> mock = new Mock<INoBrute>();
 
@@ -62,8 +63,12 @@ namespace NoBruteTesting.Abstracts
             check.AppendRequestTime = increaseTime;
             check.IsGreenRequest = greenRequest;
             check.RemoteAddr = ip;
+            check.IsBlocked = blocked;
+            check.BlockedStatusCode = blockedStatusCode;
 
             mock.Setup(x => x.CheckRequest(It.IsAny<string>())).Returns(check);
+            mock.Setup(x => x.CheckRequestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(check);
+            mock.Setup(x => x.AutoProcessRequestReleaseAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
             this.provider.AddScoped<INoBrute>(f => mock.Object);
 
