@@ -1,5 +1,9 @@
-﻿namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection
 {
+    using Microsoft.Extensions.DependencyInjection.Extensions;
+    using NoBrute.Data;
+    using NoBrute.Domain;
+    using NoBrute.Models;
     using System;
 
     public static class NoBruteExtensions
@@ -18,26 +22,34 @@
         /// </summary>
         /// <param name="services">The services.</param>
         /// <param name="configure">Action to configure registration options.</param>
-        public static void AddNoBrute(this IServiceCollection services, Action<NoBrute.Models.NoBruteRegistrationOptions> configure)
+        public static void AddNoBrute(this IServiceCollection services, Action<NoBruteRegistrationOptions> configure)
         {
             if (configure == null)
             {
                 throw new ArgumentNullException(nameof(configure));
             }
 
-            var options = new NoBrute.Models.NoBruteRegistrationOptions();
+            var options = new NoBruteRegistrationOptions();
             configure(options);
 
-            services.AddScoped<NoBrute.Domain.INoBrute, NoBrute.Data.NoBrute>();
+            services.AddHttpContextAccessor();
+            services.TryAddSingleton(options);
+
+            // Registered with TryAdd so applications can plug in their own implementation
+            // by registering it before calling AddNoBrute().
+            services.TryAddSingleton<INoBruteClientIpResolver>(provider => new NoBruteClientIpResolver(provider, options.ClientIp));
+            services.TryAddSingleton<INoBruteEntryLimiter>(provider => new NoBruteEntryLimiter(provider, options.MaxTrackedEntries));
+
+            services.AddScoped<INoBrute, global::NoBrute.Data.NoBrute>();
 
             if (options.UseMvc)
             {
-                services.AddScoped<NoBrute.NoBruteAttribute>();
+                services.AddScoped<global::NoBrute.NoBruteAttribute>();
             }
 
             if (options.UseRazorPages)
             {
-                services.AddScoped<NoBrute.NoBrutePageFilter>();
+                services.AddScoped<global::NoBrute.NoBrutePageFilter>();
             }
         }
     }

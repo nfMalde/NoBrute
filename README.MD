@@ -43,8 +43,10 @@ public IServiceProvider ConfigureServices(IServiceCollection services) {
     // Or configure which filters to register:
     services.AddNoBrute(options =>
     {
-        options.UseMvc = true;         // Register MVC action filter (default: true)
-        options.UseRazorPages = true;  // Register Razor Pages filter (default: false)
+        options.UseMvc = true;              // Register MVC action filter (default: true)
+        options.UseRazorPages = true;       // Register Razor Pages filter (default: false)
+        options.MaxTrackedEntries = 50000;  // Circuit breaker (default: from configuration, 0 = unlimited)
+        options.ClientIp = new NoBruteClientIpOptions { UseForwardedHeaders = true };
     });
 }
 ```
@@ -58,11 +60,22 @@ No configuration is required to use NoBrute. Here is a JSON example for your `ap
     "Enabled": true,
     "GreenRetries": 10,
     "IncreaseRequestTime": 20,
+    "MaxIncreaseRequestTime": 0,
     "TimeUntilReset": 2,
     "TimeUntilResetUnit": "H",
+    "MaxTrackedEntries": 0,
+    "BlockedStatusCode": 429,
     "StatusCodesForAutoProcess": [
       200
-    ]
+    ],
+    "ClientIp": {
+      "UseForwardedHeaders": false,
+      "Headers": [ "CF-Connecting-IP", "X-Forwarded-For" ],
+      "ForwardLimit": 1,
+      "KnownProxies": [],
+      "KnownNetworks": [],
+      "TrustLoopback": true
+    }
   }
 }
 ```
@@ -72,11 +85,96 @@ No configuration is required to use NoBrute. Here is a JSON example for your `ap
 | Configuration Entry Name | Description                                                                 | Default Value | Type       |
 |---------------------------|-----------------------------------------------------------------------------|---------------|------------|
 | Enabled                   | If true, the NoBrute service is enabled                                    | true          | Boolean    |
-| GreenRetries              | If this count of the same requests is reached, NoBrute will start appending request time by setting the thread to sleep for n ms | 10            | Integer    |
+| GreenRetries              | If this count of the same requests is reached, NoBrute will start appending request time (asynchronously, without blocking a thread) | 10            | Integer    |
 | IncreaseRequestTime       | For each request that exceeds the `GreenRetries` entry number, NoBrute will append n ms to the request | 20            | Integer    |
-| TimeUntilReset            | This, in combination with `TimeUntilResetUnit`, declares the time when the saved request count for a user will be cleared so the user gets normal request times again | 2             | Integer    |
+| MaxIncreaseRequestTime    | Upper bound in ms for the delay added to a single request. `0` means unlimited. Useful to stop an attacker from keeping thousands of connections open for minutes | 0             | Integer    |
+| TimeUntilReset            | This, in combination with `TimeUntilResetUnit`, declares the time when the saved request count for a user will be cleared so the user gets normal request times again. It is also used as the absolute expiration of the cache entry | 2             | Integer    |
 | TimeUntilResetUnit        | This is the unit of time used for the value of `TimeUntilReset`. Possible values: `Years = 'y', Days = 'd', Months = 'M', Hours = 'H', Minutes = 'i', Seconds = 's', Milliseconds = 'n'` | H (Hours)     | String     |
+| MaxTrackedEntries         | Maximum number of clients tracked at the same time (circuit breaker, see below). `0` means unlimited | 0             | Integer    |
+| BlockedStatusCode         | Status code returned to new clients while `MaxTrackedEntries` is reached | 429           | Integer    |
 | StatusCodesForAutoProcess | This is for auto-processing requests. (More details in the "Usage" section below.) You can declare here which status codes of an `IHttpAction` will remove saved requests automatically | [200]         | Integer[]  |
+| ClientIp                  | Client IP resolution behind reverse proxies, see below                     | see below     | Object     |
+
+## Running Behind Cloudflare, a Load Balancer or a Reverse Proxy  
+
+NoBrute stores one cache entry per client IP. Behind a proxy, `HttpContext.Connection.RemoteIpAddress` is the
+proxy, so without further configuration **every** visitor shares a single entry and honest customers would be
+slowed down after a few requests worldwide.
+
+Enable forwarded headers to make NoBrute use the real client address:
+
+```json
+{
+  "NoBrute": {
+    "ClientIp": {
+      "UseForwardedHeaders": true,
+      "Headers": [ "CF-Connecting-IP", "X-Forwarded-For" ],
+      "ForwardLimit": 1,
+      "KnownNetworks": [ "173.245.48.0/20", "103.21.244.0/22" ]
+    }
+  }
+}
+```
+
+| Configuration Entry Name | Description                                                                 | Default Value | Type       |
+|---------------------------|-----------------------------------------------------------------------------|---------------|------------|
+| UseForwardedHeaders       | If true, the headers below are used to determine the client IP             | false         | Boolean    |
+| Headers                   | Headers that are inspected, in order. The first header containing a parsable IP wins | ["CF-Connecting-IP", "X-Forwarded-For"] | String[] |
+| ForwardLimit              | Number of proxies between client and server. For a chain (`client, proxy1`) the entry `ForwardLimit` positions from the right is used | 1             | Integer    |
+| KnownProxies              | IP addresses whose forwarded headers are trusted                            | []            | String[]   |
+| KnownNetworks             | CIDR networks whose forwarded headers are trusted                           | []            | String[]   |
+| TrustLoopback             | Always trust forwarded headers coming from loopback addresses               | true          | Boolean    |
+
+> **Security note:** forwarded headers are attacker controlled. Always list your proxy in `KnownProxies` or
+> `KnownNetworks` (for Cloudflare: their published IP ranges). If both lists are empty, NoBrute accepts the
+> headers from every peer and logs a warning during startup — anyone able to reach the application directly
+> could then send a random client IP per request and bypass the protection completely.
+
+You can also configure this in code, or replace the resolution entirely by registering your own
+`INoBruteClientIpResolver` before calling `AddNoBrute()`:
+
+```csharp
+services.AddNoBrute(options =>
+{
+    options.ClientIp = new NoBruteClientIpOptions
+    {
+        UseForwardedHeaders = true,
+        KnownNetworks = { "173.245.48.0/20" }
+    };
+});
+```
+
+## Circuit Breaker: Limiting Tracked Clients  
+
+A botnet using millions of distinct source addresses would otherwise flood the memory cache or Redis with
+temporary entries. Set `MaxTrackedEntries` to cap how many clients are tracked at the same time per
+application instance:
+
+```json
+{
+  "NoBrute": {
+    "MaxTrackedEntries": 50000,
+    "BlockedStatusCode": 429
+  }
+}
+```
+
+Once the limit is reached, **already known** clients keep being processed normally, while requests from
+new clients are answered immediately with `BlockedStatusCode` (default `429 Too Many Requests`) without
+allocating another cache entry. Entries free their slot when they expire (`TimeUntilReset`) or when they
+are released via auto-processing.
+
+All cache entries are written with an absolute expiration of `TimeUntilReset`, so nothing lingers in
+memory or Redis forever.
+
+The check result exposes this state as `NoBruteRequestCheck.IsBlocked` / `BlockedStatusCode`, and all three
+filters short-circuit the request when it is set. If you need a different strategy, register your own
+`INoBruteEntryLimiter` before calling `AddNoBrute()`.
+
+> **Note:** the limit is counted per application instance. In a web farm sharing one Redis, size it per
+> instance (e.g. four instances × 50.000 = up to 200.000 entries in Redis). Because the counter is local,
+> a client that is known to Redis but not to a restarted instance is treated as a new client — while the
+> limit is reached it would be blocked there until it is tracked again.
 
 ## Usage  
 
@@ -186,21 +284,42 @@ public MyController(INoBrute nobrute) {
 
 **Use it in the Method:**  
 ```csharp
-public IHttpActionResult MyAction() {
+public async Task<IActionResult> MyAction() {
     if (1 > 0)  // or some if-else logic
     {
-        NoBruteRequestCheck check = this.nobrute.CheckRequest("MyActionRequestName");
+        NoBruteRequestCheck check = await this.nobrute.CheckRequestAsync("MyActionRequestName");
+
+        if (check.IsBlocked)
+        {
+            return StatusCode(check.BlockedStatusCode);
+        }
+
+        if (!check.IsGreenRequest)
+        {
+            await Task.Delay(check.AppendRequestTime, HttpContext.RequestAborted);
+        }
 
         // Some more logic
     }
 }
 ```
 
-The `CheckRequest` method will return an object of type `NoBruteRequestCheck`.  
-It will contain the flag `IsGreenRequest` and how much time to append to the request.  
-Additionally, some user information like IP will be returned.
+The `CheckRequestAsync` method will return an object of type `NoBruteRequestCheck`.  
+It will contain the flag `IsGreenRequest` and how much time to append to the request, the `IsBlocked` flag
+for the circuit breaker, and some user information like the resolved client IP.
 
-However, you have to call `Thread.Sleep` yourself here. The service will only release and check requests for you but never sleep the requests like the action attribute.
+The service checks and releases requests for you but never delays them — that is up to you here.
+**Always use `await Task.Delay(...)`, never `Thread.Sleep(...)`:** `Thread.Sleep` blocks an operating system
+thread, so a large bot wave would exhaust the Kestrel thread pool (thread starvation) and take the whole
+application down. `Task.Delay` releases the thread for other customers while the attacker waits.
+
+All three filters (`NoBruteAttribute`, `NoBruteEndpointFilter`, `NoBrutePageFilter`) already work this way —
+they only implement the asynchronous filter interfaces, which ASP.NET Core prefers anyway, and they use the
+asynchronous cache API (`GetAsync`/`SetAsync`) so a slow Redis never blocks a thread either.
+
+Synchronous `CheckRequest`, `ReleaseRequest` and `AutoProcessRequestRelease` still exist for compatibility.
+Avoid them in request pipelines: with an `IDistributedCache` they block the calling thread while waiting for
+the cache.
 
 See more at `/src/Domain/INoBrute.cs` and `/src/Models/NoBruteRequestCheck.cs` in the GitHub repository.
 
